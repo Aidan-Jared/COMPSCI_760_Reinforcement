@@ -1,7 +1,7 @@
 
 local socket = require "socket"
 
--- local data, msg_or_ip, port_or_nil
+local data, msg_or_ip, port_or_nil
 
 BalatrobotAPI = {}
 BalatrobotAPI.socket = nil
@@ -18,7 +18,7 @@ end
 
 
 function BalatrobotAPI.broadcast_gamestate()
-    local _gamestate = Unils.getGamestate()
+    local _gamestate = Utils.getGamestate()
 
     -- session metadata
     _gamestate.session_id = BalatrobotAPI.game_session_id
@@ -67,6 +67,7 @@ function BalatrobotAPI.broadcast_action(action)
     for client_addr, client_port in pairs(BalatrobotAPI.clients) do
         if BalatrobotAPI.socket then
             BalatrobotAPI.socket:sendto(action_json, client_addr, client_port)
+            sendDebugMessage('send data to ' .. client_addr .. "/" .. port)
         end
     end
 end
@@ -231,7 +232,7 @@ function BalatrobotAPI.init()
     local original_set_state = G.STATE_MANAGER and G.STATE_MANAGER.set_state
     if original_set_state then
         G.STATE_MANAGER.set_state = function (self, state, ...)
-            if state == G.STATES.GAME_OVER and G.STATE ~ G.STATES.GAME_OVER then
+            if state == G.STATES.GAME_OVER and G.STATE ~= G.STATES.GAME_OVER then
                 BalatrobotAPI.on_game_end()
             end
             return original_set_state(self, state, ...)

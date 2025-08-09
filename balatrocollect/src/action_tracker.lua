@@ -65,18 +65,43 @@ end
 
 -- Track blind selection decisioins
 function ActionTracker.hook_blind_actions()
-    -- select blind
+    -- Select blind
     if G.FUNCS.select_blind then
-        G.FUNCS.select_blind = Hook.addcallback(G.FUNCS.skips_blinds, function (e)
+        G.FUNCS.select_blind = Hook.addcallback(G.FUNCS.select_blind, function(e)
+            ActionTracker.log_action("SELECT_BLIND", {})
+        end)
+    end
+    
+    -- Skip blind
+    if G.FUNCS.skip_blind then
+        G.FUNCS.skip_blind = Hook.addcallback(G.FUNCS.skip_blind, function(e)
+            ActionTracker.log_action("SKIP_BLIND", {})
+        end)
+    end
+end
+
+-- Track shop decisions
+function ActionTracker.hook_shop_actions()
+    -- Shop reroll
+    if G.FUNCS.reroll_shop then
+        G.FUNCS.reroll_shop = Hook.addcallback(G.FUNCS.reroll_shop, function(e)
             ActionTracker.log_action("REROLL_SHOP", {})
         end)
     end
-
-    --End Shop
+    
+    -- End shop
     if G.FUNCS.toggle_shop then
-        G.FUNCS.toggle_shop = Hook.addcallback(G.FUNCS.toggle_shop, function (e)
-            local card =  e and e.card
+        G.FUNCS.toggle_shop = Hook.addcallback(G.FUNCS.toggle_shop, function(e)
+            ActionTracker.log_action("END_SHOP", {})
+        end)
+    end
+    
+    -- Buy joker/card from shop
+    if G.FUNCS.buy_from_shop then
+        G.FUNCS.buy_from_shop = Hook.addcallback(G.FUNCS.buy_from_shop, function(e)
+            local card = e and e.card
             if card and G.shop_jokers and G.shop_jokers.cards then
+                -- Find position in shop
                 for i, shop_card in ipairs(G.shop_jokers.cards) do
                     if shop_card == card then
                         ActionTracker.log_action("BUY_CARD", {i})
@@ -86,12 +111,13 @@ function ActionTracker.hook_blind_actions()
             end
         end)
     end
-
-    -- Buy Voucher
+    
+    -- Buy voucher
     if G.FUNCS.buy_voucher then
-        G.FUNCS.buy_voucher = Hook.addcallback(G.FUNCS.buy_voucher, function (e)
+        G.FUNCS.buy_voucher = Hook.addcallback(G.FUNCS.buy_voucher, function(e)
             local card = e and e.card
             if card and G.shop_vouchers and G.shop_vouchers.cards then
+                -- Find position in shop vouchers
                 for i, voucher_card in ipairs(G.shop_vouchers.cards) do
                     if voucher_card == card then
                         ActionTracker.log_action("BUY_VOUCHER", {i})
@@ -101,8 +127,8 @@ function ActionTracker.hook_blind_actions()
             end
         end)
     end
-
-    -- buy booster pack
+    
+    -- Buy booster pack
     if G.FUNCS.buy_and_use_consumeable then
         G.FUNCS.buy_and_use_consumeable = Hook.addcallback(G.FUNCS.buy_and_use_consumeable, function(e)
             local card = e and e.card
@@ -119,15 +145,16 @@ function ActionTracker.hook_blind_actions()
     end
 end
 
+-- Track booster pack decisions
 function ActionTracker.hook_booster_actions()
-    -- skip booster pack
+    -- Skip booster pack
     if G.FUNCS.skip_booster then
         G.FUNCS.skip_booster = Hook.addcallback(G.FUNCS.skip_booster, function(e)
             ActionTracker.log_action("SKIP_BOOSTER_PACK", {})
         end)
     end
-
-    -- select booster card
+    
+    -- Select booster card
     if G.FUNCS.use_card then
         G.FUNCS.use_card = Hook.addcallback(G.FUNCS.use_card, function(e)
             local card = e and e.card
@@ -179,7 +206,6 @@ function ActionTracker.hook_selling_actions()
         end)
     end
 end
-
 
 -- Track consumable usage
 function ActionTracker.hook_consumable_actions()

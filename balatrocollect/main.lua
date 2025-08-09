@@ -5,7 +5,7 @@
 --- MOD_DESCRIPTION: A datacollection API for Balatro
 -- Code taken from besteon/balatrobot and modified
 
-function SMODS.INIT.BALATROBOT()
+function SMODS.INIT.datacollect()
 	mw = SMODS.findModByID("datacollect-v0.1")
 
 	-- Load the mod configuration
@@ -26,8 +26,11 @@ function SMODS.INIT.BALATROBOT()
 
 	if BALATRO_BOT_CONFIG.passive_mode then
 		-- only use passive api
-		assert(load(NFS.read(mw.path .. "src/action_tracker.lua")))
-		assert(load(NFS.read(mw.path .. "src/api_passive.lua")))
+
+		assert(load(NFS.read(mw.path .. "src/action_tracker.lua")))()
+		assert(load(NFS.read(mw.path .. "src/api-passive.lua")))()
+		-- assert(load(NFS.read(mw.path .. "src/action_tracker.lua")))()
+		-- assert(load(NFS.read(mw.path .. "src/api-passive.lua")))()
 	else
 		-- load full bot if not in passive
 		assert(load(NFS.read(mw.path .. "src/bot.lua")))()

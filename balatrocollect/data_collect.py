@@ -10,7 +10,7 @@ from datetime import datetime
 from threading import Thread, Event
 
 class BalatroDataCollector:
-    def __init__(self, host = "localhost", port = 12346, save_dir="collected_data"):
+    def __init__(self, host = "localhost", port = 12345, save_dir="collected_data"):
         self.host = host
         self.port = port
         self.save_dir = save_dir
@@ -193,7 +193,7 @@ class BalatroDataCollector:
                     time.sleep(reconnect_delay)
                     continue
             try:
-                data, addr = self.sock.recvfrom(65536)
+                data, addr = self.sock.recvfrom(6553600)
                 self.process_data(data.decode('utf-8'))
             except socket.timeout:
                 continue
@@ -224,7 +224,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Collect Balatro gameplay data")
     parser.add_argument("--host", default="localhost", help="API host (default: localhost)")
-    parser.add_argument("--port", type=int, default=12346, help="API port (default: 12346)")
+    parser.add_argument("--port", type=int, default=12345, help="API port (default: 12346)")
     parser.add_argument("--save-dir", default="collected_data", help="Directory to save data (default: collected_data)")
 
     args = parser.parse_args()
