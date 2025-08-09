@@ -1,0 +1,41 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = -9
+
+# Card:open, update code from smods-1.0.0-beta-0711a/lovely/booster.toml
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''
+booster_obj = self.config.center
+if booster_obj and SMODS.Centers[booster_obj.key] then
+    G.STATE = G.STATES.SMODS_BOOSTER_OPENED
+    SMODS.OPENED_BOOSTER = self
+end
+G.GAME.pack_choices = self.ability.choose or self.config.center.config.choose or 1'''
+match_indent = true
+position = "at"
+payload = """
+booster_obj = self.config.center
+if booster_obj and SMODS.Centers[booster_obj.key] then
+    if self.ability.name:find('Arcana') then
+            G.STATE = G.STATES.TAROT_PACK
+            G.GAME.pack_size = self.ability.extra
+        elseif self.ability.name:find('Celestial') then
+            G.STATE = G.STATES.PLANET_PACK
+            G.GAME.pack_size = self.ability.extra
+        elseif self.ability.name:find('Spectral') then
+            G.STATE = G.STATES.SPECTRAL_PACK
+            G.GAME.pack_size = self.ability.extra
+        elseif self.ability.name:find('Standard') then
+            G.STATE = G.STATES.STANDARD_PACK
+            G.GAME.pack_size = self.ability.extra
+        elseif self.ability.name:find('Buffoon') then
+            G.STATE = G.STATES.BUFFOON_PACK
+            G.GAME.pack_size = self.ability.extra
+        end
+    SMODS.OPENED_BOOSTER = self
+end
+G.GAME.pack_choices = self.ability.choose or self.config.center.config.choose or 1
+"""

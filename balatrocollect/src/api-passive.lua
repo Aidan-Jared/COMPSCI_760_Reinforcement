@@ -11,6 +11,8 @@ BalatrobotAPI.game_session_id = nil
 BalatrobotAPI.game_start_time = nil
 BalatrobotAPI.actions_enabled = true -- track player actions
 
+test = 2
+
 
 function BalatrobotAPI.generate_session_id()
     return tostring(os.time()) .. "_" .. tostring(math.random(1000,9999))
@@ -36,9 +38,11 @@ function BalatrobotAPI.broadcast_gamestate()
     end
 
     -- only send if state has change or in passive mode with send_all_states
-    local state_change = not BalatrobotAPI.last_state or json.encode(_gamestate) ~= json.encode(BalatrobotAPI.last_state)
+    local state_change = not BalatrobotAPI.last_state or _gamestate.state_name ~= BalatrobotAPI.last_state.state_name
    
     if BALATRO_BOT_CONFIG.passive_mode and (BALATRO_BOT_CONFIG.send_all_states or state_change) then
+        sendDebugMessage(tostring(G.STATES))
+        sendDebugMessage('Gamestate : ' .. tostring(G.STATE) .. ' ' .. tostring(_gamestate.state_name))
         local _gamestateJsonString = json.encode(_gamestate)
 
         --broadcast to all connected clients
@@ -55,7 +59,7 @@ end
 
 function BalatrobotAPI.broadcast_action(action)
     -- send out individual action immediatly
-
+    sendDebugMessage(tostring(json.encode(action)))
     local action_msg = {
         type = "action",
         action = action,
@@ -67,7 +71,6 @@ function BalatrobotAPI.broadcast_action(action)
     for client_addr, client_port in pairs(BalatrobotAPI.clients) do
         if BalatrobotAPI.socket then
             BalatrobotAPI.socket:sendto(action_json, client_addr, client_port)
-            sendDebugMessage('send data to ' .. client_addr .. "/" .. port)
         end
     end
 end

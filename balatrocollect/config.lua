@@ -11,7 +11,7 @@ BALATRO_BOT_CONFIG = {
     frame_ratio = 1, -- Draw every 100th frame, set to 1 for normal rendering
     
     passive_mode = true, -- for collecting data while person plays
-    send_all_states = true, -- send data on every state change
+    send_all_states = false, -- send data on every state change
     track_actions = true,
 }
 

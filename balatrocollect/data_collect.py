@@ -123,7 +123,21 @@ class BalatroDataCollector:
         '''process received data, gamestate or action'''
         try:
             message = json.loads(data)
+
+            # gets the session_id for refrerence and starts recording data
+            session_id = message.get("session_id")
+
+            if session_id and session_id != self.current_session:
+                # save if new game
+                if self.current_session and self.session_data:
+                    self.save_session_data()
+
+                self.current_session = session_id
+                self.session_data = []
+                print("session started: ")
+
             if message.get("type") == "action":
+                # process player actions
                 self.process_action(message["action"])
                 return
             self.process_gamestate(message)
@@ -146,6 +160,7 @@ class BalatroDataCollector:
                 self.session_data.append(action_entry)
                 action_type = action.get("action", "UNKNOWN")
                 params = action.get("params", [])
+                print("processed action: {}".format(action.get('state_name')))
 
         except Exception as e:
               print(f"Error processing action: {e}")
@@ -153,13 +168,14 @@ class BalatroDataCollector:
     def process_gamestate(self, gamestate):
         '''process received gamestate data'''
         try:
-            # see if new session
-            session_id = gamestate.get("session_id")
-            if session_id and session_id != self.current_session:
-                if self.current_session and self.session_data:
-                    self.save_session_data()
-                self.current_session = session_id
-                self.session_data = []
+            # # see if new session
+            # session_id = gamestate.get("session_id")
+            # if session_id and session_id != self.current_session:
+            #     if self.current_session and self.session_data:
+            #         self.save_session_data()
+            #     self.current_session = session_id
+            #     self.session_data = []
+            #     print("session started: ")
             
             # add timestamp if DNE
             if "received_timestamp" not in gamestate:
@@ -171,8 +187,10 @@ class BalatroDataCollector:
             # store game state
             self.session_data.append(gamestate)
 
+            print("processed gamestate: {}".format(gamestate.get('state_name')))
+
             if gamestate.get("game_ended") or gamestate.get("state_name") == "GAME_OVER":
-                print(f"Game ended for session {session_id}")
+                print(f"Game ended for session {self.session_id}")
         
         except Exception as e:
             print(f"Error processing gamestate: {e}")
