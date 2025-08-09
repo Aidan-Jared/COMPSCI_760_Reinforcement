@@ -228,6 +228,11 @@ function BalatrobotAPI.init()
         end
     end
 
+    -- Hook game start/end events
+    if G and G.FUNCS then
+        G.FUNCS.start_run = Hook.addcallback(G.FUNCS.start_run, BalatrobotAPI.on_game_start)
+    end
+
     --hook state changes to detect game over
     local original_set_state = G.STATE_MANAGER and G.STATE_MANAGER.set_state
     if original_set_state then
