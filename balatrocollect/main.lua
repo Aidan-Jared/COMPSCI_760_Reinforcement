@@ -23,16 +23,29 @@ function SMODS.INIT.BALATROBOT()
 
 	-- Mod specific files
 	assert(load(NFS.read(mw.path .. "src/utils.lua")))()
-	assert(load(NFS.read(mw.path .. "src/bot.lua")))()
-	assert(load(NFS.read(mw.path .. "src/middleware.lua")))()
-	assert(load(NFS.read(mw.path .. "src/botlogger.lua")))()
-	assert(load(NFS.read(mw.path .. "src/api.lua")))()
 
-	sendDebugMessage("Balatrobot v0.3 loaded")
+	if BALATRO_BOT_CONFIG.passive_mode then
+		-- only use passive api
+		assert(load(NFS.read(mw.path .. "src/action_tracker.lua")))
+		assert(load(NFS.read(mw.path .. "src/api_passive.lua")))
+	else
+		-- load full bot if not in passive
+		assert(load(NFS.read(mw.path .. "src/bot.lua")))()
+		assert(load(NFS.read(mw.path .. "src/middleware.lua")))()
+		assert(load(NFS.read(mw.path .. "src/botlogger.lua")))()
+		assert(load(NFS.read(mw.path .. "src/api.lua")))()
+	end
 
-	Middleware.hookbalatro()
+	sendDebugMessage("datacollect-v0.1 loaded")
 
-	Botlogger.path = mw.path
-	Botlogger.init()
-	BalatrobotAPI.init()
+	if BALATRO_BOT_CONFIG.passive_mode then
+		BalatrobotAPI.init()
+	else
+
+		Middleware.hookbalatro()
+
+		Botlogger.path = mw.path
+		Botlogger.init()
+		BalatrobotAPI.init()
+	end
 end
