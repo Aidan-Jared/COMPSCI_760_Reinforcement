@@ -8,6 +8,7 @@ import signal
 import sys
 from datetime import datetime
 from threading import Thread, Event
+import polars as pl 
 
 class BalatroDataCollector:
     def __init__(self, host = "localhost", port = 12345, save_dir="collected_data"):
@@ -17,8 +18,11 @@ class BalatroDataCollector:
         self.sock = None
         self.running = False
         self.current_session = None
-        self.session_data = []
+        self.gamestate_data = []
+        self.action_data = []
         self.stop_event = Event()
+        self.gamestate = None
+        self.actions = None
 
         # make save dir
         os.makedirs(save_dir, exist_ok=True)
@@ -59,7 +63,7 @@ class BalatroDataCollector:
 
     def save_session_data(self):
         """Save collected session data to file"""
-        if not self.session_data or not self.current_session:
+        if not self.gamestate_data or not self.current_session or not self.action_data:
             return
             
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -68,16 +72,17 @@ class BalatroDataCollector:
         
         session_info = {
             "session_id": self.current_session,
-            "collection_start": self.session_data[0].get("timestamp") if self.session_data else None,
-            "collection_end": self.session_data[-1].get("timestamp") if self.session_data else None,
-            "total_states": len(self.session_data),
-            "states": self.session_data
+            "collection_start": self.gamestate_data[0].get("timestamp") if self.gamestate_data else None,
+            "collection_end": self.gamestate_data[-1].get("timestamp") if self.gamestate_data else None,
+            "total_states": len(self.gamestate_data),
+            "states": self.gamestate_data,
+            "actions": self.action_data,
         }
         
         try:
             with open(filepath, 'w') as f:
                 json.dump(session_info, f, indent=2)
-            print(f"Saved session data to {filepath} ({len(self.session_data)} states)")
+            print(f"Saved session data to {filepath} ({len(self.gamestate_data)} states)")
             
             # Also save as CSV for easy analysis
             self.save_session_csv(session_info, filepath.replace('.json', '.csv'))
@@ -129,11 +134,12 @@ class BalatroDataCollector:
 
             if session_id and session_id != self.current_session:
                 # save if new game
-                if self.current_session and self.session_data:
+                if self.current_session and self.gamestate_data and self.action_data:
                     self.save_session_data()
 
                 self.current_session = session_id
-                self.session_data = []
+                self.gamestate_data = []
+                self.action_data = []
                 print("session started: ")
 
             if message.get("type") == "action":
@@ -150,17 +156,26 @@ class BalatroDataCollector:
         '''process a players action in bot API format'''
         try:
             # Add to session data with special marking
-            action_entry = {
-                "type": "player_action", 
-                "action_data": action,
-                "received_timestamp": time.time()
-            }
+            # action_entry = {
+            #     "type": "player_action", 
+            #     "action_data": action,
+            #     "received_timestamp": time.time()
+            # }
+
+            action["type"] = "player_action"
+            action["received_timestamp"] = time.time()
 
             if self.current_session:
-                self.session_data.append(action_entry)
-                action_type = action.get("action", "UNKNOWN")
-                params = action.get("params", [])
+                self.action_data.append(action)
                 print("processed action: {}".format(action.get('state_name')))
+                
+                # if len(self.action_data) > 10:
+                #     if not self.actions:
+                #         self.actions = pl.from_dicts(self.action_data)
+                #     else:
+                #         self.actions.update(pl.from_dicts(self.action_data))
+                
+                # self.action_data = []
 
         except Exception as e:
               print(f"Error processing action: {e}")
@@ -185,7 +200,17 @@ class BalatroDataCollector:
             gamestate["type"] = "game_state"
 
             # store game state
-            self.session_data.append(gamestate)
+            if gamestate.get('response') != 'Connected to passive data stream':
+                self.gamestate_data.append(gamestate)
+            
+            # if len(self.gamestate_data) > 10:
+                    
+            #     if not self.gamestate:
+            #         self.gamestate = pl.from_dicts(self.gamestate_data)
+            #     else:
+            #         self.gamestate.update(pl.from_dicts(self.gamestate_data))
+                
+            #     self.gamestate_data = []
 
             print("processed gamestate: {}".format(gamestate))
 
@@ -229,7 +254,7 @@ class BalatroDataCollector:
         self.stop_event.set()
         
         # Save any remaining session data
-        if self.current_session and self.session_data:
+        if self.current_session and self.gamestate_data and self.action_data:
             print("Saving final session data...")
             self.save_session_data()
         
