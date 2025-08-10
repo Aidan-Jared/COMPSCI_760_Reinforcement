@@ -11,9 +11,6 @@ BalatrobotAPI.game_session_id = nil
 BalatrobotAPI.game_start_time = nil
 BalatrobotAPI.actions_enabled = true -- track player actions
 
-test = 2
-
-
 function BalatrobotAPI.generate_session_id()
     return tostring(os.time()) .. "_" .. tostring(math.random(1000,9999))
 end
@@ -30,6 +27,45 @@ function BalatrobotAPI.broadcast_gamestate()
     if G and G.STATE then
         _gamestate.current_state = G.STATE
         _gamestate.state_name = BalatrobotAPI.get_state_name(G.STATE)
+
+        -- Add context-specific IDs
+        if G.STATE == G.STATES.BLIND_SELECT and _gamestate.ante and _gamestate.ante.blinds then
+            _gamestate.context_id = _gamestate.ante.blinds.selection_id
+            _gamestate.context_type = "blind_selection"
+        elseif G.STATE == G.STATES.SHOP and _gamestate.shop then
+            _gamestate.context_id = _gamestate.shop.shop_id
+            _gamestate.context_type = "shop_visit"
+        end
+    end
+
+    if BalatrobotAPI.actions_enabled and ActionTracker then
+        local blind_id = nil
+        local shop_id = nil
+        
+        -- set new ids
+        if _gamestate.ante and _gamestate.ante.blinds and _gamestate.ante.blinds.selection_id then
+            blind_id = _gamestate.ante.blinds.selection_id
+        end
+        
+        if _gamestate.shop and _gamestate.shop.shop_id then
+            shop_id = _gamestate.shop.shop_id
+        end
+        
+        -- pass to actions
+        ActionTracker.set_last_context_ids(blind_id, shop_id)
+
+        -- Clear context when moving to unrelated states
+        if G and G.STATE then
+            if G.STATE ~= G.STATES.BLIND_SELECT and G.STATE ~= G.STATES.SELECTING_HAND and G.STATE ~= G.STATES.HAND_PLAYED and G.STATE ~= G.STATES.DRAW_TO_HAND then
+                ActionTracker.clear_blind_context()
+            end
+            if G.STATE ~= G.STATES.SHOP then
+                ActionTracker.clear_shop_context()
+            end
+        end
+        
+        -- add recent actions 
+        _gamestate.recent_actions = ActionTracker.get_all_actions()
     end
 
     -- add recent actions if action tracking enabled
@@ -42,6 +78,8 @@ function BalatrobotAPI.broadcast_gamestate()
    
     if BALATRO_BOT_CONFIG.passive_mode and (BALATRO_BOT_CONFIG.send_all_states or state_change) then
         local _gamestateJsonString = json.encode(_gamestate)
+
+        sendDebugMessage(_gamestateJsonString)
 
         --broadcast to all connected clients
         for client_addr, client_port in pairs(BalatrobotAPI.clients) do

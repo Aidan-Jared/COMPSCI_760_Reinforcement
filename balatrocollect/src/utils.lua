@@ -1,6 +1,69 @@
 
 Utils = { }
 
+-- ID generators that avoid circular references
+function Utils.generateBlindSelectionId()
+    if G and G.GAME and G.STATE == G.STATES.BLIND_SELECT then
+        local blind_id_parts = {
+            tostring(G.GAME.round or 0),
+            tostring(G.GAME.round_resets.ante or 0),
+            tostring(os.time()) -- Add timestamp for uniqueness
+        }
+        
+        -- Add blind choice keys if available (avoid complex objects)
+        if G.GAME.round_resets and G.GAME.round_resets.blind_choices then
+            for i, choice in ipairs(G.GAME.round_resets.blind_choices) do
+                if choice and choice.key then
+                    table.insert(blind_id_parts, tostring(choice.key))
+                end
+            end
+        end
+        
+        return table.concat(blind_id_parts, "_")
+    end
+    return nil
+end
+
+function Utils.generateShopId()
+    if G and G.GAME and G.STATE == G.STATES.SHOP and G.shop_jokers and G.shop_booster and G.shop_vouchers then
+        local shop_id_parts = {
+            tostring(G.GAME.round or 0),
+            tostring(G.GAME.round_resets.ante or 0),
+            tostring(G.GAME.current_round.reroll_cost or 0),
+            tostring(#G.shop_jokers.cards),
+            tostring(#G.shop_booster.cards),
+            tostring(#G.shop_vouchers.cards),
+            tostring(os.time()) -- Add timestamp for uniqueness
+        }
+        
+        -- Add card keys safely (avoid circular refs in config)
+        for i = 1, #G.shop_jokers.cards do
+            local card = G.shop_jokers.cards[i]
+            if card and card.config and card.config.center and card.config.center.key then
+                table.insert(shop_id_parts, tostring(card.config.center.key))
+            end
+        end
+        
+        for i = 1, #G.shop_booster.cards do
+            local card = G.shop_booster.cards[i]
+            if card and card.config and card.config.center and card.config.center.key then
+                table.insert(shop_id_parts, tostring(card.config.center.key))
+            end
+        end
+        
+        for i = 1, #G.shop_vouchers.cards do
+            local card = G.shop_vouchers.cards[i]
+            if card and card.config and card.config.center and card.config.center.key then
+                table.insert(shop_id_parts, tostring(card.config.center.key))
+            end
+        end
+        
+        return table.concat(shop_id_parts, "_")
+    end
+    return nil
+end
+
+
 
 function Utils.getCardData(card)
     local _card = { }
@@ -60,23 +123,27 @@ function Utils.getConsumablesData()
 end
 
 function Utils.getBlindData()
-    local _blinds = { }
+    local _blinds = {}
 
     if G and G.GAME then
         _blinds.ondeck = G.GAME.blind_on_deck
+        
+        -- Add current blind information if available (avoid circular refs)
+        if G.GAME.blind then
+            _blinds.current = {
+                name = G.GAME.blind.name,
+                key = G.GAME.blind.key,
+                chips = G.GAME.blind.chips,
+                mult = G.GAME.blind.mult
+                -- Removed config to avoid circular references
+            }
+        end
+        
+        -- Use the safe ID generator
+        if G.STATE == G.STATES.BLIND_SELECT then
+            _blinds.selection_id = Utils.generateBlindSelectionId()
+        end
     end
-
-    -- if G.GAME.blind then
-    --         _blinds.current = {
-    --             name = G.GAME.blind.name,
-    --             key = G.GAME.blind.key,
-    --             chips = G.GAME.blind.chips,
-    --             mult = G.GAME.blind.mult,
-    --             config = G.GAME.blind.config
-    --         }
-    -- end
-
-
 
     return _blinds
 end
@@ -113,6 +180,11 @@ function Utils.getShopData()
 
     for i = 1, #G.shop_vouchers.cards do
         _shop.vouchers[i] = Utils.getCardData(G.shop_vouchers.cards[i])
+    end
+
+    -- Use the safe ID generator
+    if G.STATE == G.STATES.SHOP then
+        _shop.shop_id = Utils.generateShopId()
     end
 
     return _shop

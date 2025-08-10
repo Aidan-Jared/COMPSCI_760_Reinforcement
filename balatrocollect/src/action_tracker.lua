@@ -2,11 +2,40 @@ ActionTracker = {}
 ActionTracker.actions = {}
 ActionTracker.session_id = nil
 
+ActionTracker.last_blind_id = nil
+ActionTracker.last_shop_id = nil
+
 function ActionTracker.init()
     ActionTracker.actions = {}
     ActionTracker.session_id = BalatrobotAPI.game_session_id
+    ActionTracker.last_blind_id = nil
+    ActionTracker.last_shop_id = nil
 end
 
+-- Store the last generated IDs from gamestate broadcasts
+function ActionTracker.set_last_context_ids(blind_id, shop_id)
+   if blind_id then
+        ActionTracker.last_blind_id = blind_id
+    end
+    if shop_id then
+        ActionTracker.last_shop_id = shop_id
+    end
+end
+
+-- Clear context IDs when moving to unrelated states
+function ActionTracker.clear_context_ids()
+    ActionTracker.last_blind_id = nil
+    ActionTracker.last_shop_id = nil
+end
+
+-- Clear specific context ID when it's no longer relevant
+function ActionTracker.clear_blind_context()
+    ActionTracker.last_blind_id = nil
+end
+
+function ActionTracker.clear_shop_context()
+    ActionTracker.last_shop_id = nil
+end
 
 function ActionTracker.log_action(action_type, params)
     local action = {
@@ -18,8 +47,26 @@ function ActionTracker.log_action(action_type, params)
         game_state = G.STATE and BalatrobotAPI.get_state_name(G.STATE) or "UNKNOWN",
     }
 
+    -- Use the most relevant context ID based on current state
+    -- Blind ID takes precedence in blind-related states
+    if G and G.STATE and (G.STATE == G.STATES.BLIND_SELECT or G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED) and ActionTracker.last_blind_id then
+        action.context_id = ActionTracker.last_blind_id
+        action.context_type = "new_blind"
+    -- Shop ID for shop-related states  
+    elseif G and G.STATE and G.STATE == G.STATES.SHOP and ActionTracker.last_shop_id then
+        action.context_id = ActionTracker.last_shop_id
+        action.context_type = "shop_visit"
+    -- Fallback to any available context ID
+    elseif ActionTracker.last_shop_id then
+        action.context_id = ActionTracker.last_shop_id
+        action.context_type = "shop_visit"
+    elseif ActionTracker.last_blind_id then
+        action.context_id = ActionTracker.last_blind_id
+        action.context_type = "blind_selection"
+    end
+
     table.insert(ActionTracker.actions, action)
-    sendDebugMessage("Action logged: " .. action_type)
+    sendDebugMessage("Action logged: " .. action_type .. " with context: " .. tostring(action.context_id or "none"))
 
     BalatrobotAPI.broadcast_action(action)
 end
@@ -359,6 +406,7 @@ function ActionTracker.hook_booster_actions()
 end
 
 -- Track joker selling decisions
+-- need to find in blind sell options (action == None)
 function ActionTracker.hook_selling_actions()
     if G.FUNCS.sell_card then
         G.FUNCS.sell_card = Hook.addcallback(G.FUNCS.sell_card, function(e)
@@ -386,7 +434,7 @@ function ActionTracker.hook_selling_actions()
                     end
                 elseif card.area and card.area.config.type == 'consumeable' and G.consumeables and G.consumeables.cards then
                     -- Fix: G.consumables -> G.consumeables
-                    for i, consumable_card in ipairs(G.consumeables.cards) do
+                    for i, consumable_card in ipairs(G.consumables.cards) do
                         if consumable_card == card then
                             card_data.position = i
                             card_data.area = "consumeables"
@@ -471,6 +519,7 @@ function ActionTracker.hook_run_start()
 end
 
 function ActionTracker.get_all_actions()
+    -- maybe update to reset with new blind_id or shop_id
     return ActionTracker.actions
 end
 
