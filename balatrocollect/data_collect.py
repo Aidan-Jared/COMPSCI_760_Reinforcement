@@ -187,7 +187,7 @@ class BalatroDataCollector:
             # store game state
             self.session_data.append(gamestate)
 
-            print("processed gamestate: {}".format(gamestate.get('state_name')))
+            print("processed gamestate: {}".format(gamestate))
 
             if gamestate.get("game_ended") or gamestate.get("state_name") == "GAME_OVER":
                 print(f"Game ended for session {self.session_id}")

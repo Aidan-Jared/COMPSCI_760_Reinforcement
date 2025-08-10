@@ -41,8 +41,6 @@ function BalatrobotAPI.broadcast_gamestate()
     local state_change = not BalatrobotAPI.last_state or _gamestate.state_name ~= BalatrobotAPI.last_state.state_name
    
     if BALATRO_BOT_CONFIG.passive_mode and (BALATRO_BOT_CONFIG.send_all_states or state_change) then
-        sendDebugMessage(tostring(G.STATES))
-        sendDebugMessage('Gamestate : ' .. tostring(G.STATE) .. ' ' .. tostring(_gamestate.state_name))
         local _gamestateJsonString = json.encode(_gamestate)
 
         --broadcast to all connected clients
@@ -152,6 +150,7 @@ function BalatrobotAPI.on_game_start()
     end
 
     sendDebugMessage('New game session started: ' .. BalatrobotAPI.game_session_id)
+    -- sendDebugMessage(G.SETTINGS.profile)
 end
 
 function BalatrobotAPI.on_game_end()
@@ -183,7 +182,7 @@ function BalatrobotAPI.init()
         ActionTracker.hook_shop_actions()
         ActionTracker.hook_booster_actions()
         ActionTracker.hook_selling_actions()
-        ActionTracker.hook_consumable_actions()
+        -- ActionTracker.hook_consumable_actions()
         ActionTracker.hook_rearrange_actions()
         ActionTracker.hook_run_start()
     end

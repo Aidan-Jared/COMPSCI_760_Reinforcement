@@ -1,6 +1,7 @@
 
 Utils = { }
 
+
 function Utils.getCardData(card)
     local _card = { }
 
@@ -65,6 +66,18 @@ function Utils.getBlindData()
         _blinds.ondeck = G.GAME.blind_on_deck
     end
 
+    -- if G.GAME.blind then
+    --         _blinds.current = {
+    --             name = G.GAME.blind.name,
+    --             key = G.GAME.blind.key,
+    --             chips = G.GAME.blind.chips,
+    --             mult = G.GAME.blind.mult,
+    --             config = G.GAME.blind.config
+    --         }
+    -- end
+
+
+
     return _blinds
 end
 
@@ -107,6 +120,10 @@ end
 
 function Utils.getHandScoreData()
     local _handscores = { }
+    if G and G.GAME and G.GAME.blind then
+        _handscores.score = G.GAME.chips
+        _handscores.goal = G.GAME.blind.chips
+    end
 
     return _handscores
 end
