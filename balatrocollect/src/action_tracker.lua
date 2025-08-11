@@ -212,11 +212,14 @@ function ActionTracker.hook_shop_actions()
     if G.FUNCS.buy_from_shop then
         G.FUNCS.buy_from_shop = Hook.addcallback(G.FUNCS.buy_from_shop, function(e)
             -- Get the card from e.config.ref_table (as shown in the original function)
-            local card = e and e.config and e.config.ref_table
+            local card = e.config.ref_table
             
-            if card and card:is(card) then
+            sendDebugMessage('\n')
+            sendDebugMessage(json.encode(card))
+            sendDebugMessage('\n')
+            if card and card:is(Card) then
                 local card_data = {
-                    key = card.config and card.config.center and card.config.center.key,
+                    key = card.config.center.key,
                     name = card.config and card.config.center and card.config.center.name,
                     set = card.ability and card.ability.set,
                     cost = card.cost,
@@ -278,11 +281,11 @@ function ActionTracker.hook_shop_actions()
     -- Buy voucher
     if G.FUNCS.buy_voucher then
         G.FUNCS.buy_voucher = Hook.addcallback(G.FUNCS.buy_voucher, function(e)
-            local card = e and e.config and e.config.ref_table
+            local card = e.config.ref_table
             
             if card and card:is(Card) then
                 local card_data = {
-                    key = card.config and card.config.center and card.config.center.key,
+                    key = card.config.center.key,
                     name = card.config and card.config.center and card.config.center.name,
                     cost = card.cost
                 }
@@ -305,11 +308,11 @@ function ActionTracker.hook_shop_actions()
     -- Buy booster pack
     if G.FUNCS.buy_and_use_consumeable then
         G.FUNCS.buy_and_use_consumeable = Hook.addcallback(G.FUNCS.buy_and_use_consumeable, function(e)
-            local card = e and e.config and e.config.ref_table
+            local card = e.config.ref_table
             
             if card and card:is(Card) then
                 local card_data = {
-                    key = card.config and card.config.center and card.config.center.key,
+                    key = card.config.center.key,
                     name = card.config and card.config.center and card.config.center.name,
                     cost = card.cost,
                     pack_size = card.ability and card.ability.extra
@@ -344,14 +347,14 @@ function ActionTracker.hook_booster_actions()
     if G.FUNCS.use_card then
         G.FUNCS.use_card = Hook.addcallback(G.FUNCS.use_card, function(e, mute, nosave)
             -- Fix: Use e.config.ref_table instead of e.card
-            local card = e and e.config and e.config.ref_table
+            local card = e.config.ref_table
             
             if card and card:is(Card) and G.pack_cards and G.pack_cards.cards then
                 -- Check if this is a pack selection (card is in pack_cards area)
                 for i, pack_card in ipairs(G.pack_cards.cards) do
                     if pack_card == card then
                         local card_data = {
-                            key = card.config and card.config.center and card.config.center.key,
+                            key = card.config.center.key,
                             name = card.config and card.config.center and card.config.center.name,
                             set = card.ability and card.ability.set,
                             position = i
@@ -378,7 +381,7 @@ function ActionTracker.hook_booster_actions()
                     for i, consumable_card in ipairs(G.consumeables.cards) do
                         if consumable_card == card then
                             local card_data = {
-                                key = card.config and card.config.center and card.config.center.key,
+                                key = card.config.center.key,
                                 name = card.config and card.config.center and card.config.center.name,
                                 set = card.ability and card.ability.set,
                                 position = i
@@ -410,12 +413,13 @@ end
 function ActionTracker.hook_selling_actions()
     if G.FUNCS.sell_card then
         G.FUNCS.sell_card = Hook.addcallback(G.FUNCS.sell_card, function(e)
+            sendDebugMessage(tostring(G.FUNCS.sell_card))
             -- Fix: Use e.config.ref_table instead of e.card
-            local card = e and e.config and e.config.ref_table
+            local card = e.config.ref_table
             
             if card and card:is(Card) then
                 local card_data = {
-                    key = card.config and card.config.center and card.config.center.key,
+                    key = card.config.center.key,
                     name = card.config and card.config.center and card.config.center.name,
                     set = card.ability and card.ability.set,
                     sell_value = card.sell_cost or 0,
@@ -424,6 +428,7 @@ function ActionTracker.hook_selling_actions()
                 
                 if card.area and card.area.config.type == 'joker' and G.jokers and G.jokers.cards then
                     -- Find position in jokers
+                    sendDebugMessage("HERE")
                     for i, joker_card in ipairs(G.jokers.cards) do
                         if joker_card == card then
                             card_data.position = i
