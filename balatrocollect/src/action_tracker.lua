@@ -1,74 +1,64 @@
 ActionTracker = {}
 ActionTracker.actions = {}
-ActionTracker.session_id = nil
-
-ActionTracker.last_blind_id = nil
-ActionTracker.last_shop_id = nil
 
 function ActionTracker.init()
     ActionTracker.actions = {}
-    ActionTracker.session_id = BalatrobotAPI.game_session_id
-    ActionTracker.last_blind_id = nil
-    ActionTracker.last_shop_id = nil
+    sendDebugMessage("ActionTracker initialized for session: " .. tostring(Utils.current_session_id))
 end
 
--- Store the last generated IDs from gamestate broadcasts
-function ActionTracker.set_last_context_ids(blind_id, shop_id)
-   if blind_id then
-        ActionTracker.last_blind_id = blind_id
-    end
-    if shop_id then
-        ActionTracker.last_shop_id = shop_id
-    end
-end
-
--- Clear context IDs when moving to unrelated states
-function ActionTracker.clear_context_ids()
-    ActionTracker.last_blind_id = nil
-    ActionTracker.last_shop_id = nil
-end
-
--- Clear specific context ID when it's no longer relevant
-function ActionTracker.clear_blind_context()
-    ActionTracker.last_blind_id = nil
-end
-
-function ActionTracker.clear_shop_context()
-    ActionTracker.last_shop_id = nil
-end
 
 function ActionTracker.log_action(action_type, params)
+    
+    Utils.ensureSessionId()
+
+    local current_context_ids = Utils.getCurrentContextIds()
+    
     local action = {
         timestamp = os.time(),
         game_time = BalatrobotAPI.game_start_time and (os.time() - BalatrobotAPI.game_start_time) or 0,
-        session_id = ActionTracker.session_id,
+        session_id = current_context_ids.session_id,
         action = action_type,
         params = params or {},
         game_state = G.STATE and BalatrobotAPI.get_state_name(G.STATE) or "UNKNOWN",
     }
 
+    -- add all avaliable context ids
+    if current_context_ids.round_id then
+        action.round_id = current_context_ids.round_id
+    end
+
     -- Use the most relevant context ID based on current state
-    -- Blind ID takes precedence in blind-related states
-    if G and G.STATE and (G.STATE == G.STATES.BLIND_SELECT or G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED) and ActionTracker.last_blind_id then
-        action.context_id = ActionTracker.last_blind_id
-        action.context_type = "new_blind"
-    -- Shop ID for shop-related states  
-    elseif G and G.STATE and G.STATE == G.STATES.SHOP and ActionTracker.last_shop_id then
-        action.context_id = ActionTracker.last_shop_id
-        action.context_type = "shop_visit"
-    -- Fallback to any available context ID
-    elseif ActionTracker.last_shop_id then
-        action.context_id = ActionTracker.last_shop_id
-        action.context_type = "shop_visit"
-    elseif ActionTracker.last_blind_id then
-        action.context_id = ActionTracker.last_blind_id
-        action.context_type = "blind_selection"
+    if G and G.STATE then
+        if Utils.isBlindContextState(G.STATE) and current_context_ids.blind_id then
+            action.context_id = current_context_ids.blind_id
+            action.context_type = "blind_session"
+            action.blind_id = current_context_ids.blind_id
+        elseif Utils.isShopContextState(G.STATE) and current_context_ids.shop_id then
+            action.context_id = current_context_ids.shop_id
+            action.context_type = "shop_session"  
+            action.shop_id = current_context_ids.shop_id
+        -- Fallback to any available context ID
+        elseif current_context_ids.shop_id then
+            action.context_id = current_context_ids.shop_id
+            action.context_type = "shop_session"
+            action.shop_id = current_context_ids.shop_id
+        elseif current_context_ids.blind_id then
+            action.context_id = current_context_ids.blind_id
+            action.context_type = "blind_session"
+            action.blind_id = current_context_ids.blind_id
+        end
     end
 
     table.insert(ActionTracker.actions, action)
     sendDebugMessage("Action logged: " .. action_type .. " with context: " .. tostring(action.context_id or "none"))
 
     BalatrobotAPI.broadcast_action(action)
+end
+
+-- Clear actions when starting new context sessions
+function ActionTracker.clear_actions_for_new_context(context_type)
+    sendDebugMessage("Clearing actions for new " .. context_type .. " context")
+    ActionTracker.actions = {}
 end
 
 
@@ -711,6 +701,9 @@ end
 function ActionTracker.hook_run_start()
     if G.FUNCS.start_run then
         G.FUNCS.start_run = Hook.addcallback(G.FUNCS.start_run, function(e)
+
+            Utils.resetAllIds()
+            
             -- The run start data might not be in e directly, need to check G.GAME state
             local stake = G.GAME and G.GAME.stake or 1
             local deck = G.GAME and G.GAME.selected_back and G.GAME.selected_back.name or "Red Deck"

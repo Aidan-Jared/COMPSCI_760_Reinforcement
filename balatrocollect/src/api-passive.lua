@@ -7,81 +7,41 @@ BalatrobotAPI = {}
 BalatrobotAPI.socket = nil
 BalatrobotAPI.clients = {}
 BalatrobotAPI.last_state = nil
-BalatrobotAPI.game_session_id = nil
 BalatrobotAPI.game_start_time = nil
 BalatrobotAPI.actions_enabled = true -- track player actions
 
-function BalatrobotAPI.generate_session_id()
-    return tostring(os.time()) .. "_" .. tostring(math.random(1000,9999))
-end
 
 
 function BalatrobotAPI.broadcast_gamestate()
     local _gamestate = Utils.getGamestate()
 
-    -- session metadata
-    _gamestate.session_id = BalatrobotAPI.game_session_id
+    -- Add API-specific metadata
     _gamestate.timestamp = os.time()
     _gamestate.game_time = BalatrobotAPI.game_start_time and (os.time() - BalatrobotAPI.game_start_time) or 0
 
     if G and G.STATE then
         _gamestate.current_state = G.STATE
         _gamestate.state_name = BalatrobotAPI.get_state_name(G.STATE)
-
-        -- Add context-specific IDs
-        if G.STATE == G.STATES.BLIND_SELECT and _gamestate.ante and _gamestate.ante.blinds then
-            _gamestate.context_id = _gamestate.ante.blinds.selection_id
-            _gamestate.context_type = "blind_selection"
-        elseif G.STATE == G.STATES.SHOP and _gamestate.shop then
-            _gamestate.context_id = _gamestate.shop.shop_id
-            _gamestate.context_type = "shop_visit"
-        end
     end
 
-    if BalatrobotAPI.actions_enabled and ActionTracker then
-        local blind_id = nil
-        local shop_id = nil
-        
-        -- set new ids
-        if _gamestate.ante and _gamestate.ante.blinds and _gamestate.ante.blinds.selection_id then
-            blind_id = _gamestate.ante.blinds.selection_id
-        end
-        
-        if _gamestate.shop and _gamestate.shop.shop_id then
-            shop_id = _gamestate.shop.shop_id
-        end
-        
-        -- pass to actions
-        ActionTracker.set_last_context_ids(blind_id, shop_id)
-
-        -- Clear context when moving to unrelated states
-        if G and G.STATE then
-            if G.STATE ~= G.STATES.BLIND_SELECT and G.STATE ~= G.STATES.SELECTING_HAND and G.STATE ~= G.STATES.HAND_PLAYED and G.STATE ~= G.STATES.DRAW_TO_HAND then
-                ActionTracker.clear_blind_context()
-            end
-            if G.STATE ~= G.STATES.SHOP then
-                ActionTracker.clear_shop_context()
-            end
-        end
-        
-        -- add recent actions 
-        _gamestate.recent_actions = ActionTracker.get_all_actions()
-    end
-
-    -- add recent actions if action tracking enabled
+    -- Add recent actions if action tracking enabled
     if BalatrobotAPI.actions_enabled and ActionTracker then
         _gamestate.recent_actions = ActionTracker.get_all_actions()
     end
 
-    -- only send if state has change or in passive mode with send_all_states
-    local state_change = not BalatrobotAPI.last_state or _gamestate.state_name ~= BalatrobotAPI.last_state.state_name
+    -- Only send if state has changed or in passive mode with send_all_states
+    local state_changed = not BalatrobotAPI.last_state or 
+                         _gamestate.state_name ~= BalatrobotAPI.last_state.state_name --or
+                        --  _gamestate.context_id ~= (BalatrobotAPI.last_state and BalatrobotAPI.last_state.context_id)
    
-    if BALATRO_BOT_CONFIG.passive_mode and (BALATRO_BOT_CONFIG.send_all_states or state_change) then
+    if BALATRO_BOT_CONFIG.passive_mode and (BALATRO_BOT_CONFIG.send_all_states or state_changed) then
         local _gamestateJsonString = json.encode(_gamestate)
 
-        sendDebugMessage(_gamestateJsonString)
+        sendDebugMessage("Broadcasting gamestate: " .. _gamestate.state_name .. 
+                        " (session: " .. tostring(_gamestate.session_id) .. 
+                        ", context: " .. tostring(_gamestate.context_id) .. ")")
 
-        --broadcast to all connected clients
+        -- Broadcast to all connected clients
         for client_addr, client_port in pairs(BalatrobotAPI.clients) do
             if BalatrobotAPI.socket then
                 BalatrobotAPI.socket:sendto(_gamestateJsonString, client_addr, client_port)
@@ -91,11 +51,11 @@ function BalatrobotAPI.broadcast_gamestate()
         BalatrobotAPI.last_state = _gamestate
     end
 end
+
     
 
 function BalatrobotAPI.broadcast_action(action)
     -- send out individual action immediatly
-    sendDebugMessage(tostring(json.encode(action)))
     local action_msg = {
         type = "action",
         action = action,
@@ -103,6 +63,11 @@ function BalatrobotAPI.broadcast_action(action)
     }
 
     local action_json = json.encode(action_msg)
+
+    sendDebugMessage('\n')
+    sendDebugMessage("Broadcasting action: " .. action.action .. 
+                    " (context: " .. tostring(action.context_id) .. ")")
+    sendDebugMessage('\n')
 
     for client_addr, client_port in pairs(BalatrobotAPI.clients) do
         if BalatrobotAPI.socket then
@@ -180,21 +145,20 @@ end
 
 
 function BalatrobotAPI.on_game_start()
-    BalatrobotAPI.game_session_id = BalatrobotAPI.generate_session_id()
+    -- Reset Utils IDs for new game
+    Utils.resetAllIds()
     BalatrobotAPI.game_start_time = os.time()
 
     if BalatrobotAPI.actions_enabled and ActionTracker then
         ActionTracker.init()
     end
 
-    sendDebugMessage('New game session started: ' .. BalatrobotAPI.game_session_id)
-    -- sendDebugMessage(G.SETTINGS.profile)
+    sendDebugMessage('New game session started: ' .. Utils.current_session_id)
 end
 
 function BalatrobotAPI.on_game_end()
-    if BalatrobotAPI.game_session_id then
+    if Utils.current_session_id then
         local final_state = Utils.getGamestate()
-        final_state.session_id = BalatrobotAPI.game_session_id
         final_state.game_end = true
         final_state.final_timestamp = os.time()
 
@@ -204,8 +168,9 @@ function BalatrobotAPI.on_game_end()
                 BalatrobotAPI.socket:sendto(final_json, client_addr, client_port)
             end
         end
-        sendDebugMessage('Game session ended: ' .. BalatrobotAPI.game_session_id)
-        BalatrobotAPI.game_session_id = nil
+        sendDebugMessage('Game session ended: ' .. Utils.current_session_id)
+        
+        -- Don't reset IDs here, let the next game start handle it
         BalatrobotAPI.game_start_time = nil
     end
 end
@@ -220,7 +185,6 @@ function BalatrobotAPI.init()
         ActionTracker.hook_shop_actions()
         ActionTracker.hook_booster_actions()
         ActionTracker.hook_selling_actions()
-        -- ActionTracker.hook_consumable_actions()
         ActionTracker.hook_rearrange_actions()
         ActionTracker.hook_run_start()
     end
