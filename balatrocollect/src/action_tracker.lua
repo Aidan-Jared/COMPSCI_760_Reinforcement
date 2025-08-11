@@ -213,10 +213,7 @@ function ActionTracker.hook_shop_actions()
         G.FUNCS.buy_from_shop = Hook.addcallback(G.FUNCS.buy_from_shop, function(e)
             -- Get the card from e.config.ref_table (as shown in the original function)
             local card = e.config.ref_table
-            
-            sendDebugMessage('\n')
-            sendDebugMessage(json.encode(card))
-            sendDebugMessage('\n')
+        
             if card and card:is(Card) then
                 local card_data = {
                     key = card.config.center.key,
@@ -526,28 +523,188 @@ end
 
 -- Track rearrangement actions (these are harder to detect, might need different approach)
 function ActionTracker.hook_rearrange_actions()
-    -- Rearrangement is complex because it involves drag/drop
-    -- For now, we'll just log when areas are reordered
-    -- This might need to be enhanced based on how the game handles rearrangement
-    
-    -- Hook joker area reordering
-    if G.jokers then
-        local original_set_ranks = G.jokers.set_ranks
-        if original_set_ranks then
-            G.jokers.set_ranks = function(self, ...)
-                -- Get current order
-                local current_order = {}
-                for i, card in ipairs(self.cards) do
-                    current_order[i] = i  -- This is simplified
+    local area_states = {
+        jokers = {cards = {}, last_update = 0},
+        hand = {cards = {}, last_update = 0},
+    }
+
+    -- track user input vs game rearrangment
+    local user_input_active = false
+    local input_timeout = .5
+    local last_input_time = 0
+
+    local function capture_area_state(area)
+        if not area or not area.cards then return {} end
+        local state = {}
+        for i, card in ipairs(ara.cards) do
+            if card and card.config and card.config.center then
+                state[i] = {
+                    key = card.config.center.key,
+                    sort_id = card.sort_id,
+                    unique_id = card.unique_val or tostring(card)
+                }
+            end
+        end
+        return state
+    end
+
+    -- compare states and detect rearrangments
+    local function detect_rearrangement(area_name, area)
+        if not area or not area.cards then return end
+
+        local current_state = capture_area_state(area)
+        local stored_states = area_states[area_name]
+        local prev_state = stored_states.cards
+
+        -- skip if no previous state or empty area
+        if #prev_state == 0 or #current_state == 0 then
+            area_states[area_name].cards = current_state
+            area_states[area_name].last_update = os.time()
+            return
+        end
+
+        local current_keys = {}
+        local prev_keys = {}
+
+        for _, card_info in pairs(current_state) do
+            table.insert(current_keys, card_info.key)
+        end
+        for _, card_info in pairs(prev_state) do
+            table.insert(prev_keys, card_info.key)
+        end
+
+        table.sort(current_keys)
+        table.sort(prev_keys)
+
+        -- only track rearrangments, not additions or removals
+        local same_cards = #current_keys == #prev_keys
+        if same_cards then
+            for i = 1, #current_keys do
+                if current_keys[i] ~= prev_keys[i] then
+                    same_cards = false
+                    break
+                end
+            end
+        end
+
+        if same_cards and #current_state > 1 then
+            local changes = {}
+            for i =1, #current_state do
+                local current_card = current_state[i]
+                
+                -- find where card was in prev state
+                for j = 1, #prev_state do
+                    if prev_state[j].unique_id == current_card.unique_id and i ~= j then
+                        table.insert(changes, {
+                            card_key = current_card.key,
+                            from_position = j,
+                            to_position = i
+                        })
+                        break
+                    end
+                end
+            end
+
+            if #changes > 0 then
+                -- player or game initiated
+                local current_time = os.time()
+                local time_since_input = current_time - last_input_time
+                local is_player_action = user_input_active or time_since_input < input_timeout
+
+                local action_type = is_player_action and "PLAYER_REARRANGE" or "GAME_REARRANGE"
+
+                for _, change in ipairs(changes) do
+                    ActionTracker.log_action(action_type, {
+                        area_type = area_name,
+                        card_key = change.card_key,
+                        from_position = change.from_position,
+                        to_position = change.to_position,
+                        timestamp = current_time,
+                        game_state = G.STATE and ActionTracker.get_state_name(G.STATE) or "UNKNOWN",
+                        -- Additional context for ML
+                        total_cards_in_area = #current_state,
+                        area_capacity = area.config and area.config.card_limit,
+                        user_input_detected = is_player_action
+                    })
+                end
+            end
+        end
+
+        -- Update stored state
+        area_states[area_name].cards = current_state
+        area_states[area_name].last_update = os.time()
+
+        if CardArea then
+        -- Hook emplace (when cards are placed in areas)
+        if CardArea.emplace then
+            local original_emplace = CardArea.emplace
+            CardArea.emplace = function(self, card, pos, ...)
+                local result = original_emplace(self, card, pos, ...)
+                
+                -- Check for rearrangement after emplace
+                if self == G.jokers then
+                    detect_rearrangement("jokers", self)
+                elseif self == G.hand then
+                    detect_rearrangement("hand", self)
                 end
                 
-                -- Only log if this was a player-initiated reorder
-                -- (This is hard to detect, might need additional context)
+                return result
+            end
+        end
+
+        if CardArea.remove_card then
+            local original_remove_card = CardArea.remove_card
+            CardArea.remove_card = function(self, card, ...)
+                local result = original_remove_card(self, card, ...)
                 
-                return original_set_ranks(self, ...)
+                -- Don't check immediately on remove, wait for emplace
+                -- Just reset input timer
+                user_input_active = false
+                
+                return result
+            end
+        end
+
+        ActionTracker.check_rearrangements_periodic = function(dt)
+        local current_time = love.timer.getTime()
+        
+        -- Reset user input flag after timeout
+        if current_time - last_input_time > input_timeout then
+            user_input_active = false
+        end
+        
+        -- Periodic state check
+        if current_time - last_periodic_check > PERIODIC_CHECK_INTERVAL then
+            last_periodic_check = current_time
+            
+            -- Only check during states where rearrangement matters
+            if G and G.STATE and (
+                G.STATE == G.STATES.SELECTING_HAND or
+                G.STATE == G.STATES.SHOP or
+                G.STATE == G.STATES.BLIND_SELECT or
+                G.STATE == G.STATES.DRAW_TO_HAND or
+                G.STATE == G.STATES.HAND_PLAYED
+            ) then
+                detect_rearrangement("jokers", G.jokers)
+                detect_rearrangement("hand", G.hand)
             end
         end
     end
+    
+    -- Hook this into the main update loop
+    if BalatrobotAPI and BalatrobotAPI.update then
+        local original_update = BalatrobotAPI.update
+        BalatrobotAPI.update = function(dt)
+            ActionTracker.check_rearrangements_periodic(dt)
+            return original_update(dt)
+        end
+    end
+    
+    -- Initialize area states
+    if G and G.jokers then detect_rearrangement("jokers", G.jokers) end
+    if G and G.hand then detect_rearrangement("hand", G.hand) end
+    end
+end
 end
 
 -- Track run start decisions
@@ -571,6 +728,26 @@ function ActionTracker.hook_run_start()
             ActionTracker.log_action("START_RUN", run_data)
         end)
     end
+end
+
+function ActionTracker.get_state_name(state)
+    local state_names = {
+        [G.STATES.MENU] = "MENU",
+        [G.STATES.SELECTING_HAND] = "SELECTING_HAND",
+        [G.STATES.HAND_PLAYED] = "HAND_PLAYED",
+        [G.STATES.DRAW_TO_HAND] = "DRAW_TO_HAND",
+        [G.STATES.GAME_OVER] = "GAME_OVER",
+        [G.STATES.SHOP] = "SHOP",
+        [G.STATES.BLIND_SELECT] = "BLIND_SELECT",
+        [G.STATES.ROUND_EVAL] = "ROUND_EVAL",
+        [G.STATES.TAROT_PACK] = "TAROT_PACK",
+        [G.STATES.PLANET_PACK] = "PLANET_PACK",
+        [G.STATES.SPECTRAL_PACK] = "SPECTRAL_PACK",
+        [G.STATES.STANDARD_PACK] = "STANDARD_PACK",
+        [G.STATES.BUFFOON_PACK] = "BUFFOON_PACK",
+        [G.STATES.NEW_ROUND] = "NEW_ROUND"
+    }
+    return state_names[state] or "UNKNOWN"
 end
 
 function ActionTracker.get_all_actions()
