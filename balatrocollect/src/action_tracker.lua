@@ -343,65 +343,115 @@ function ActionTracker.hook_booster_actions()
         end)
     end
     
-    -- Select booster card (FIXED)
+    -- Use card (comprehensive tracking)
     if G.FUNCS.use_card then
         G.FUNCS.use_card = Hook.addcallback(G.FUNCS.use_card, function(e, mute, nosave)
-            -- Fix: Use e.config.ref_table instead of e.card
             local card = e.config.ref_table
             
-            if card and card:is(Card) and G.pack_cards and G.pack_cards.cards then
-                -- Check if this is a pack selection (card is in pack_cards area)
-                for i, pack_card in ipairs(G.pack_cards.cards) do
-                    if pack_card == card then
-                        local card_data = {
-                            key = card.config.center.key,
-                            name = card.config and card.config.center and card.config.center.name,
-                            set = card.ability and card.ability.set,
+            if card and card:is(Card) then
+                local card_data = {
+                    key = card.config and card.config.center and card.config.center.key,
+                    name = card.config and card.config.center and card.config.center.name,
+                    set = card.ability and card.ability.set,
+                    cost = card.cost,
+                    edition = card.edition,
+                    seal = card.seal
+                }
+                
+                -- Determine the action type based on card set and context
+                local action_type = nil
+                local position = nil
+                
+                -- Check if it's a booster pack selection
+                if G.pack_cards and G.pack_cards.cards then
+                    for i, pack_card in ipairs(G.pack_cards.cards) do
+                        if pack_card == card then
                             position = i
-                        }
-                        
-                        -- Get highlighted hand cards for consumable cards
-                        local highlighted_positions = {}
-                        if G.hand and G.hand.cards then
-                            for j, hand_card in ipairs(G.hand.cards) do
-                                if hand_card.highlighted then
-                                    table.insert(highlighted_positions, j)
-                                end
-                            end
-                        end
-                        
-                        card_data.highlighted_hand_positions = highlighted_positions
-                        ActionTracker.log_action("SELECT_BOOSTER_CARD", card_data)
-                        break
-                    end
-                end
-            elseif card and card:is(Card) and card.area and card.area.config.type == 'consumeable' then
-                -- This is a consumable being used from the consumeables area
-                if G.consumeables and G.consumeables.cards then
-                    for i, consumable_card in ipairs(G.consumeables.cards) do
-                        if consumable_card == card then
-                            local card_data = {
-                                key = card.config.center.key,
-                                name = card.config and card.config.center and card.config.center.name,
-                                set = card.ability and card.ability.set,
-                                position = i
-                            }
-                            
-                            -- Get highlighted hand cards
-                            local highlighted_positions = {}
-                            if G.hand and G.hand.cards then
-                                for j, hand_card in ipairs(G.hand.cards) do
-                                    if hand_card.highlighted then
-                                        table.insert(highlighted_positions, j)
-                                    end
-                                end
-                            end
-                            
-                            card_data.highlighted_hand_positions = highlighted_positions
-                            ActionTracker.log_action("USE_CONSUMABLE", card_data)
+                            action_type = "SELECT_BOOSTER_CARD"
                             break
                         end
                     end
+                end
+                
+                -- If not from pack, determine by card type and area
+                if not action_type then
+                    if card.ability.set == 'Booster' then
+                        action_type = "USE_BOOSTER_PACK"
+                        -- Find position in shop boosters or consumeables
+                        if G.shop_booster and G.shop_booster.cards then
+                            for i, booster_card in ipairs(G.shop_booster.cards) do
+                                if booster_card == card then
+                                    position = i
+                                    break
+                                end
+                            end
+                        elseif G.consumeables and G.consumeables.cards then
+                            for i, consumeable_card in ipairs(G.consumeables.cards) do
+                                if consumeable_card == card then
+                                    position = i
+                                    break
+                                end
+                            end
+                        end
+                        
+                    elseif card.ability.consumeable then
+                        action_type = "USE_CONSUMABLE"
+                        -- Find position in consumeables area
+                        if G.consumeables and G.consumeables.cards then
+                            for i, consumeable_card in ipairs(G.consumeables.cards) do
+                                if consumeable_card == card then
+                                    position = i
+                                    break
+                                end
+                            end
+                        end
+                        
+                    elseif card.ability.set == 'Voucher' then
+                        action_type = "USE_VOUCHER"
+                        -- Find position in shop vouchers
+                        if G.shop_vouchers and G.shop_vouchers.cards then
+                            for i, voucher_card in ipairs(G.shop_vouchers.cards) do
+                                if voucher_card == card then
+                                    position = i
+                                    break
+                                end
+                            end
+                        end
+                        
+                    elseif card.ability.set == 'Enhanced' or card.ability.set == 'Default' then
+                        action_type = "ADD_PLAYING_CARD"
+                        -- This is adding a playing card to deck (from booster pack usually)
+                        
+                    elseif card.ability.set == 'Joker' then
+                        action_type = "ADD_JOKER"
+                        -- This is adding a joker to collection (from booster pack usually)
+                    end
+                end
+                
+                -- Get highlighted hand cards for consumables that target cards
+                if card.ability.consumeable or action_type == "USE_CONSUMABLE" then
+                    local highlighted_positions = {}
+                    if G.hand and G.hand.cards then
+                        for j, hand_card in ipairs(G.hand.cards) do
+                            if hand_card.highlighted then
+                                table.insert(highlighted_positions, j)
+                            end
+                        end
+                    end
+                    card_data.highlighted_hand_positions = highlighted_positions
+                end
+                
+                -- Add position if found
+                if position then
+                    card_data.position = position
+                end
+                
+                -- Log the action if we identified it
+                if action_type then
+                    ActionTracker.log_action(action_type, card_data)
+                else
+                    -- Fallback for unknown card usage
+                    ActionTracker.log_action("USE_CARD_UNKNOWN", card_data)
                 end
             end
         end)
