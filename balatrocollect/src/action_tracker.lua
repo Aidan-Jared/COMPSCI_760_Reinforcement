@@ -17,6 +17,7 @@ function ActionTracker.log_action(action_type, params)
         timestamp = os.time(),
         game_time = BalatrobotAPI.game_start_time and (os.time() - BalatrobotAPI.game_start_time) or 0,
         session_id = current_context_ids.session_id,
+        gamestate_id = current_context_ids.gamestate_id,
         action = action_type,
         params = params or {},
         game_state = G.STATE and BalatrobotAPI.get_state_name(G.STATE) or "UNKNOWN",
@@ -703,7 +704,7 @@ function ActionTracker.hook_run_start()
         G.FUNCS.start_run = Hook.addcallback(G.FUNCS.start_run, function(e)
 
             Utils.resetAllIds()
-            
+
             -- The run start data might not be in e directly, need to check G.GAME state
             local stake = G.GAME and G.GAME.stake or 1
             local deck = G.GAME and G.GAME.selected_back and G.GAME.selected_back.name or "Red Deck"

@@ -5,7 +5,10 @@ Utils.current_session_id = nil
 Utils.current_round_id = nil
 Utils.current_blind_id = nil
 Utils.current_shop_id = nil
+Utils.current_gamestate_id = nil
 Utils.previous_state = nil
+
+Utils.gamestate_counter = 0
 
 
 -- Session ID: Generated at game start
@@ -33,6 +36,16 @@ function Utils.generateBlindId()
     local ante_num = G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante or 0
     return Utils.current_session_id .. "_B" .. ante_num .. "-" .. round_num .. "_" .. os.time()
 end
+
+-- Gamestate ID: Generated for each unique gamestate broadcast
+function Utils.generateGamestateId()
+    if not Utils.current_session_id then
+        Utils.current_session_id = Utils.generateSessionId()
+    end
+    
+    Utils.gamestate_counter = Utils.gamestate_counter + 1
+    return Utils.current_session_id .. "_GS" .. Utils.gamestate_counter .. "_" .. os.time()
+end 
 
 -- Shop ID: Generated when entering SHOP state  
 function Utils.generateShopId()
@@ -396,12 +409,15 @@ function Utils.getGamestate()
     if G and G.STATE then
         Utils.updateContextIds(G.STATE, Utils.previous_state)
     end
+
+    Utils.current_gamestate_id = Utils.generateGamestateId()
     
     local _gamestate = Utils.getGameData()
     
     -- Add all context IDs to gamestate
     _gamestate.session_id = Utils.current_session_id
     _gamestate.round_id = Utils.current_round_id
+    _gamestate.gamestate_id = Utils.current_gamestate_id
     
     -- Add context-specific IDs based on current state
     if G and G.STATE then
