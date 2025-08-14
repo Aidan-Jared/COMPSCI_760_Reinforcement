@@ -381,6 +381,26 @@ function Utils.getRoundData()
     return _current_round
 end
 
+function Utils.getHandLevelsData()
+    local hand_levels = {}
+    
+    if G and G.GAME and G.GAME.hands then
+        for hand_name, hand_data in pairs(G.GAME.hands) do
+            if hand_data then
+                hand_levels[hand_name] = {
+                    level = hand_data.level or 0,
+                    chips = hand_data.chips or 0,
+                    mult = hand_data.mult or 0,
+                    played = hand_data.played or 0,
+                    visible = hand_data.visible or false
+                }
+            end
+        end
+    end
+    
+    return hand_levels
+end
+
 function Utils.getGameData()
     local _game = { }
 
@@ -396,6 +416,7 @@ function Utils.getGameData()
         _game.max_jokers = G.GAME.max_jokers
         _game.bankrupt_at = G.GAME.bankrupt_at
         _game.chips = G.GAME.chips
+        _game.hand_levels = Utils.getHandLevelsData()
     end
 
     return _game

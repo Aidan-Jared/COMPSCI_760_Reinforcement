@@ -29,8 +29,6 @@ function SMODS.INIT.datacollect()
 
 		assert(load(NFS.read(mw.path .. "src/action_tracker.lua")))()
 		assert(load(NFS.read(mw.path .. "src/api-passive.lua")))()
-		-- assert(load(NFS.read(mw.path .. "src/action_tracker.lua")))()
-		-- assert(load(NFS.read(mw.path .. "src/api-passive.lua")))()
 	else
 		-- load full bot if not in passive
 		assert(load(NFS.read(mw.path .. "src/bot.lua")))()
