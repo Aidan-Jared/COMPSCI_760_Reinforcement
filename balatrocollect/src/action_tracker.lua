@@ -13,13 +13,15 @@ function ActionTracker.log_action(action_type, params, card_info)
 
     local current_context_ids = Utils.getCurrentContextIds()
     
+    local formatted_params = ActionTracker.format_params_for_bot(action_type, params, card_info)
+
     local action = {
         timestamp = os.time(),
         game_time = BalatrobotAPI.game_start_time and (os.time() - BalatrobotAPI.game_start_time) or 0,
         session_id = current_context_ids.session_id,
         gamestate_id = current_context_ids.gamestate_id,
         action = action_type,
-        params = params or {},
+        params = formatted_params,
         card_info = card_info or {},
         game_state = G.STATE and BalatrobotAPI.get_state_name(G.STATE) or "UNKNOWN",
     }
@@ -56,6 +58,155 @@ function ActionTracker.log_action(action_type, params, card_info)
 
     BalatrobotAPI.broadcast_action(action)
 end
+
+function ActionTracker.format_params_for_bot(action_type, params, card_info)
+    local formatted_params = params or {}
+    
+    -- Map action types to Bot.ACTIONS format
+    if action_type == "PLAY_HAND" or action_type == "DISCARD_HAND" then
+        -- Bot expects: action_type, [card_positions]
+        if type(params) == "table" and #params > 0 then
+            formatted_params = params -- params should already be card positions
+        end
+        
+    elseif action_type == "SELECT_BLIND" or action_type == "SKIP_BLIND" then
+        -- Bot expects: action_type (no additional params needed)
+        formatted_params = {}
+        
+    elseif action_type == "BUY_CARD" or action_type == "BUY_VOUCHER" or action_type == "BUY_BOOSTER" then
+        -- Bot expects: action_type, [position]
+        if type(params) == "number" then
+            formatted_params = {params}
+        elseif type(params) == "table" and params[1] then
+            formatted_params = {params[1]}
+        else
+            formatted_params = {1} -- default to position 1
+        end
+        
+    elseif action_type == "SELECT_BOOSTER_CARD" then
+        -- Bot expects: action_type, [hand_positions], [booster_position]
+        local hand_positions = {}
+        local booster_position = 1
+        
+        if card_info and card_info.highlighted_hand_positions then
+            hand_positions = card_info.highlighted_hand_positions
+        end
+        
+        if type(params) == "number" then
+            booster_position = params
+        elseif type(params) == "table" and params[1] then
+            booster_position = params[1]
+        end
+        
+        formatted_params = {hand_positions, {booster_position}}
+        
+    elseif action_type == "SELL_JOKER" then
+        -- Bot expects: action_type, [position]
+        if type(params) == "number" then
+            formatted_params = {params}
+        elseif type(params) == "table" and params[1] then
+            formatted_params = {params[1]}
+        else
+            formatted_params = {}
+        end
+        
+    elseif action_type == "REARRANGE_JOKERS" or action_type == "REARRANGE_CONSUMABLES" or action_type == "REARRANGE_HAND" then
+        -- Bot expects: action_type, [new_order_array]
+        -- params should be the new order array from hook_rearrange_actions
+        if type(params) == "table" and #params > 0 then
+            -- params is already the new_order array like {2, 1, 4, 3}
+            formatted_params = {params}
+        else
+            -- Fallback: create identity order if no valid params
+            formatted_params = {{}}
+        end
+        
+    elseif action_type == "REARRANGE_CARD" then
+        -- Legacy individual rearrange action (if still used elsewhere)
+        -- Bot expects: action_type, [from_position], [to_position], [area_type]
+        if type(params) == "table" then
+            local from_pos = params.from_position or 1
+            local to_pos = params.to_position or 1
+            local area_type = params.area_type or "hand"
+            formatted_params = {from_pos, to_pos, area_type}
+        else
+            formatted_params = {1, 1, "hand"}
+        end
+        
+    elseif action_type == "START_RUN" then
+        -- Bot expects: action_type, [stake], [deck], [seed], [challenge]
+        local stake = {1}
+        local deck = {"Red Deck"}
+        local seed = {G.GAME.pseudorandom.seed}
+        local challenge = {nil}
+        
+        if type(params) == "table" then
+            if params.stake then stake = {params.stake} end
+            if params.deck then deck = {params.deck} end
+            if params.seed then seed = {params.seed} end
+            if params.challenge then challenge = {params.challenge} end
+        end
+        
+        formatted_params = {stake, deck, seed, challenge}
+        
+    else
+        -- Default case - keep params as is
+        if type(params) ~= "table" then
+            formatted_params = params and {params} or {}
+        end
+    end
+    
+    return formatted_params
+end
+
+-- Convert ActionTracker action types to Bot.ACTIONS constants
+function ActionTracker.get_bot_action_constant(action_type)
+    local action_map = {
+        ["SELECT_BLIND"] = 1,     -- Bot.ACTIONS.SELECT_BLIND
+        ["SKIP_BLIND"] = 2,       -- Bot.ACTIONS.SKIP_BLIND  
+        ["PLAY_HAND"] = 3,        -- Bot.ACTIONS.PLAY_HAND
+        ["DISCARD_HAND"] = 4,     -- Bot.ACTIONS.DISCARD_HAND
+        ["END_SHOP"] = 5,         -- Bot.ACTIONS.END_SHOP
+        ["REROLL_SHOP"] = 6,      -- Bot.ACTIONS.REROLL_SHOP
+        ["BUY_CARD"] = 7,         -- Bot.ACTIONS.BUY_CARD
+        ["BUY_VOUCHER"] = 8,      -- Bot.ACTIONS.BUY_VOUCHER
+        ["BUY_BOOSTER"] = 9,      -- Bot.ACTIONS.BUY_BOOSTER
+        ["SELECT_BOOSTER_CARD"] = 10, -- Bot.ACTIONS.SELECT_BOOSTER_CARD
+        ["SKIP_BOOSTER_PACK"] = 11,   -- Bot.ACTIONS.SKIP_BOOSTER_PACK
+        ["SELL_JOKER"] = 12,      -- Bot.ACTIONS.SELL_JOKER
+        ["USE_CONSUMABLE"] = 13,  -- Bot.ACTIONS.USE_CONSUMABLE
+        ["SELL_CONSUMABLE"] = 14, -- Bot.ACTIONS.SELL_CONSUMABLE
+        ["REARRANGE_JOKERS"] = 15,    -- Bot.ACTIONS.REARRANGE_JOKERS
+        ["REARRANGE_CONSUMABLES"] = 16, -- Bot.ACTIONS.REARRANGE_CONSUMABLES
+        ["REARRANGE_HAND"] = 17,  -- Bot.ACTIONS.REARRANGE_HAND
+        ["START_RUN"] = 19,       -- Bot.ACTIONS.START_RUN
+    }
+    
+    return action_map[action_type] or nil
+end
+
+-- Create bot-compatible action format
+function ActionTracker.create_bot_action(action_type, params, card_info)
+    local bot_action_constant = ActionTracker.get_bot_action_constant(action_type)
+    if not bot_action_constant then
+        return nil
+    end
+    
+    local formatted_params = ActionTracker.format_params_for_bot(action_type, params, card_info)
+    local bot_action = {bot_action_constant}
+    
+    -- Add formatted parameters
+    if type(formatted_params) == "table" and #formatted_params > 0 then
+        for i, param in ipairs(formatted_params) do
+            table.insert(bot_action, param)
+        end
+    elseif formatted_params then
+        table.insert(bot_action, formatted_params)
+    end
+    
+    return bot_action
+end
+
 
 -- Clear actions when starting new context sessions
 function ActionTracker.clear_actions_for_new_context(context_type)
@@ -141,13 +292,13 @@ function ActionTracker.detect_hand_type(highlighted_positions)
     end
     
     -- Count pairs, trips, etc.
-    local pairs = 0
+    local pairs_c = 0 -- different name to not override functions
     local trips = false
     local quads = false
     local fives = false
     
     for rank, count in pairs(rank_counts) do
-        if count == 2 then pairs = pairs + 1 end
+        if count == 2 then pairs_c = pairs_c + 1 end
         if count == 3 then trips = true end
         if count == 4 then quads = true end
         if count == 5 then fives = true end
@@ -167,15 +318,15 @@ function ActionTracker.detect_hand_type(highlighted_positions)
         hand_info.hand_name = "Flush"
     elseif quads then
         hand_info.hand_name = "Four of a Kind"
-    elseif trips and pairs >= 1 then
+    elseif trips and pairs_c >= 1 then
         hand_info.hand_name = "Full House"
     elseif is_flush then
         hand_info.hand_name = "Flush"
     elseif trips then
         hand_info.hand_name = "Three of a Kind"
-    elseif pairs >= 2 then
+    elseif pairs_c >= 2 then
         hand_info.hand_name = "Two Pair"
-    elseif pairs >= 1 then
+    elseif pairs_c >= 1 then
         hand_info.hand_name = "Pair"
     else
         hand_info.hand_name = "High Card"
@@ -711,46 +862,39 @@ function ActionTracker.hook_rearrange_actions()
         end
         
         if same_cards and #current_state.cards > 1 then
-            -- Find position changes
-            local movements = {}
-            
-            for _, card_info in pairs(current_state.cards) do
-                local card_id = card_info.card_id
-                local current_pos = card_info.position
-                local previous_pos = previous_state.positions[card_id]
-                
-                if previous_pos and current_pos ~= previous_pos then
-                    table.insert(movements, {
-                        card_id = card_id,
-                        card_key = card_info.key,
-                        card_name = card_info.name,
-                        from_position = previous_pos,
-                        to_position = current_pos,
-                        suit = card_info.suit,
-                        value = card_info.value,
-                        set = card_info.set
-                    })
+            -- Build complete rearrangement order for bot compatibility
+            local new_order = {}
+            for i = 1, #current_state.cards do
+                local current_card = current_state.cards[i]
+                if current_card then
+                    local original_position = previous_state.positions[current_card.card_id]
+                    if original_position then
+                        new_order[original_position] = i
+                    end
                 end
             end
             
-            -- Log each movement as a separate action
-            if #movements > 0 then
-                sendDebugMessage("Detected " .. #movements .. " card movements in " .. area_name)
-                
-                for _, movement in ipairs(movements) do
-                    ActionTracker.log_action("REARRANGE_CARD", movement.to_position,{
-                        area_type = area_name,
-                        card_key = movement.card_key,
-                        card_name = movement.card_name,
-                        card_id = movement.card_id,
-                        from_position = movement.from_position,
-                        suit = movement.suit,
-                        value = movement.value,
-                        set = movement.set,
-                        total_cards = #current_state.cards,
-                        timestamp = os.time()
-                    })
+            -- Check if any actual reordering occurred
+            local has_changes = false
+            for i = 1, #new_order do
+                if new_order[i] ~= i then
+                    has_changes = true
+                    break
                 end
+            end
+            
+            if has_changes then
+                local action_type = area_name == "hand" and "REARRANGE_HAND" or 
+                                 area_name == "jokers" and "REARRANGE_JOKERS" or 
+                                 "REARRANGE_CONSUMABLES"
+                
+                ActionTracker.log_action(action_type, new_order, {
+                    area_type = area_name,
+                    total_cards = #current_state.cards,
+                    timestamp = os.time()
+                })
+                
+                sendDebugMessage("Detected " .. area_name .. " rearrangement: " .. table.concat(new_order, ","))
             end
         end
         
@@ -894,6 +1038,7 @@ function ActionTracker.hook_rearrange_actions()
     
     sendDebugMessage("Card rearrangement tracking initialized successfully")
 end
+
 
 -- Track run start decisions
 function ActionTracker.hook_run_start()

@@ -26,7 +26,7 @@ function BalatrobotAPI.broadcast_gamestate()
 
     -- Add recent actions if action tracking enabled
     if BalatrobotAPI.actions_enabled and ActionTracker then
-        _gamestate.recent_actions = ActionTracker.get_all_actions()
+        -- _gamestate.recent_actions = ActionTracker.get_all_actions()
     end
 
     -- Only send if state has changed or in passive mode with send_all_states
