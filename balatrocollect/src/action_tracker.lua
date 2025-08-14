@@ -7,7 +7,7 @@ function ActionTracker.init()
 end
 
 
-function ActionTracker.log_action(action_type, params)
+function ActionTracker.log_action(action_type, params, card_info)
     
     Utils.ensureSessionId()
 
@@ -20,6 +20,7 @@ function ActionTracker.log_action(action_type, params)
         gamestate_id = current_context_ids.gamestate_id,
         action = action_type,
         params = params or {},
+        card_info = card_info or {},
         game_state = G.STATE and BalatrobotAPI.get_state_name(G.STATE) or "UNKNOWN",
     }
 
@@ -224,7 +225,6 @@ function ActionTracker.hook_hand_actions()
                         local score_info = ActionTracker.get_hand_score_info()
                         
                         local final_action_data = {
-                            card_positions = card_positions,
                             cards_used = hand_detection.cards_used,
                             hand_played = {
                                 name = score_info.hand_name,
@@ -241,7 +241,7 @@ function ActionTracker.hook_hand_actions()
                             }
                         }
                         
-                        ActionTracker.log_action("PLAY_HAND", final_action_data)
+                        ActionTracker.log_action("PLAY_HAND", card_positions, final_action_data)
                         sendDebugMessage("Played " .. score_info.hand_name .. 
                                        " for " .. score_info.total_score .. " points")
                         return true
@@ -275,7 +275,6 @@ function ActionTracker.hook_hand_actions()
             
             if #card_positions > 0 then
                 local action_data = {
-                    card_positions = card_positions,
                     discarded_cards = discarded_cards,
                     game_state = {
                         discards_left = G.GAME.current_round and G.GAME.current_round.discards_left or 0,
@@ -284,7 +283,7 @@ function ActionTracker.hook_hand_actions()
                     }
                 }
                 
-                ActionTracker.log_action("DISCARD_HAND", action_data)
+                ActionTracker.log_action("DISCARD_HAND", card_positions, action_data)
                 sendDebugMessage("Discarded " .. #card_positions .. " cards")
             end
         end)
@@ -313,14 +312,14 @@ function ActionTracker.hook_blind_actions()
     -- Select blind
     if G.FUNCS.select_blind then
         G.FUNCS.select_blind = Hook.addcallback(G.FUNCS.select_blind, function(e)
-            ActionTracker.log_action("SELECT_BLIND", {})
+            ActionTracker.log_action("SELECT_BLIND", {}, {})
         end)
     end
     
     -- Skip blind
     if G.FUNCS.skip_blind then
         G.FUNCS.skip_blind = Hook.addcallback(G.FUNCS.skip_blind, function(e)
-            ActionTracker.log_action("SKIP_BLIND", {})
+            ActionTracker.log_action("SKIP_BLIND", {}, {})
         end)
     end
 end
@@ -329,14 +328,14 @@ function ActionTracker.hook_shop_actions()
     -- Shop reroll
     if G.FUNCS.reroll_shop then
         G.FUNCS.reroll_shop = Hook.addcallback(G.FUNCS.reroll_shop, function(e)
-            ActionTracker.log_action("REROLL_SHOP", {})
+            ActionTracker.log_action("REROLL_SHOP", {}, {})
         end)
     end
     
     -- End shop
     if G.FUNCS.toggle_shop then
         G.FUNCS.toggle_shop = Hook.addcallback(G.FUNCS.toggle_shop, function(e)
-            ActionTracker.log_action("END_SHOP", {})
+            ActionTracker.log_action("END_SHOP", {}, {})
         end)
     end
     
@@ -393,11 +392,10 @@ function ActionTracker.hook_shop_actions()
                 end
                 
                 if position then
-                    card_data.position = position
-                    ActionTracker.log_action("BUY_CARD", card_data)
+                    ActionTracker.log_action("BUY_CARD", position, card_data)
                 else
                     -- Log anyway with available data
-                    ActionTracker.log_action("BUY_CARD", card_data)
+                    ActionTracker.log_action("BUY_CARD", position, card_data)
                 end
                 
                 sendDebugMessage('Bought card: ' .. tostring(card_data.name or card_data.key or "unknown"))
@@ -409,6 +407,7 @@ function ActionTracker.hook_shop_actions()
     
     -- Buy voucher
     if G.FUNCS.buy_voucher then
+        local position = nil
         G.FUNCS.buy_voucher = Hook.addcallback(G.FUNCS.buy_voucher, function(e)
             local card = e.config.ref_table
             
@@ -423,19 +422,20 @@ function ActionTracker.hook_shop_actions()
                 if G.shop_vouchers and G.shop_vouchers.cards then
                     for i, voucher_card in ipairs(G.shop_vouchers.cards) do
                         if voucher_card == card then
-                            card_data.position = i
+                            position = i
                             break
                         end
                     end
                 end
                 
-                ActionTracker.log_action("BUY_VOUCHER", card_data)
+                ActionTracker.log_action("BUY_VOUCHER", position, card_data)
             end
         end)
     end
     
     -- Buy booster pack
     if G.FUNCS.buy_and_use_consumeable then
+        local position = nil
         G.FUNCS.buy_and_use_consumeable = Hook.addcallback(G.FUNCS.buy_and_use_consumeable, function(e)
             local card = e.config.ref_table
             
@@ -451,13 +451,13 @@ function ActionTracker.hook_shop_actions()
                 if G.shop_booster and G.shop_booster.cards then
                     for i, booster_card in ipairs(G.shop_booster.cards) do
                         if booster_card == card then
-                            card_data.position = i
+                            position = i
                             break
                         end
                     end
                 end
                 
-                ActionTracker.log_action("BUY_BOOSTER", card_data)
+                ActionTracker.log_action("BUY_BOOSTER", position, card_data)
             end
         end)
     end
@@ -468,7 +468,7 @@ function ActionTracker.hook_booster_actions()
     -- Skip booster pack
     if G.FUNCS.skip_booster then
         G.FUNCS.skip_booster = Hook.addcallback(G.FUNCS.skip_booster, function(e)
-            ActionTracker.log_action("SKIP_BOOSTER_PACK", {})
+            ActionTracker.log_action("SKIP_BOOSTER_PACK", {}, {})
         end)
     end
     
@@ -571,16 +571,13 @@ function ActionTracker.hook_booster_actions()
                 end
                 
                 -- Add position if found
-                if position then
-                    card_data.position = position
-                end
                 
                 -- Log the action if we identified it
                 if action_type then
-                    ActionTracker.log_action(action_type, card_data)
+                    ActionTracker.log_action(action_type, position, card_data)
                 else
                     -- Fallback for unknown card usage
-                    ActionTracker.log_action("USE_CARD_UNKNOWN", card_data)
+                    ActionTracker.log_action("USE_CARD_UNKNOWN", position, card_data)
                 end
             end
         end)
@@ -591,6 +588,7 @@ end
 -- need to find in blind sell options (action == None)
 function ActionTracker.hook_selling_actions()
     if G.FUNCS.sell_card then
+        local position = nil
         G.FUNCS.sell_card = Hook.addcallback(G.FUNCS.sell_card, function(e)
             sendDebugMessage(tostring(G.FUNCS.sell_card))
             -- Fix: Use e.config.ref_table instead of e.card
@@ -607,12 +605,11 @@ function ActionTracker.hook_selling_actions()
                 
                 if card.area and card.area.config.type == 'joker' and G.jokers and G.jokers.cards then
                     -- Find position in jokers
-                    sendDebugMessage("HERE")
                     for i, joker_card in ipairs(G.jokers.cards) do
                         if joker_card == card then
-                            card_data.position = i
+                            position = i
                             card_data.area = "jokers"
-                            ActionTracker.log_action("SELL_JOKER", card_data)
+                            ActionTracker.log_action("SELL_JOKER", position, card_data)
                             break
                         end
                     end
@@ -620,9 +617,9 @@ function ActionTracker.hook_selling_actions()
                     -- Fix: G.consumables -> G.consumeables
                     for i, consumable_card in ipairs(G.consumables.cards) do
                         if consumable_card == card then
-                            card_data.position = i
+                            position = i
                             card_data.area = "consumeables"
-                            ActionTracker.log_action("SELL_CONSUMABLE", card_data)
+                            ActionTracker.log_action("SELL_CONSUMABLE", position, card_data)
                             break
                         end
                     end
@@ -634,6 +631,9 @@ end
 
 
 -- Track rearrangement actions (these are harder to detect, might need different approach)
+
+-- Enhanced card rearrangement tracking for ActionTracker
+-- This replaces the existing hook_rearrange_actions function
 
 function ActionTracker.hook_rearrange_actions()
     -- Track area states for comparison
@@ -738,13 +738,12 @@ function ActionTracker.hook_rearrange_actions()
                 sendDebugMessage("Detected " .. #movements .. " card movements in " .. area_name)
                 
                 for _, movement in ipairs(movements) do
-                    ActionTracker.log_action("REARRANGE_CARD", {
+                    ActionTracker.log_action("REARRANGE_CARD", movement.to_position,{
                         area_type = area_name,
                         card_key = movement.card_key,
                         card_name = movement.card_name,
                         card_id = movement.card_id,
                         from_position = movement.from_position,
-                        to_position = movement.to_position,
                         suit = movement.suit,
                         value = movement.value,
                         set = movement.set,
@@ -917,7 +916,7 @@ function ActionTracker.hook_run_start()
             }
             
             sendDebugMessage('Start run with: ' .. tostring(seed))
-            ActionTracker.log_action("START_RUN", run_data)
+            ActionTracker.log_action("START_RUN", run_data, {})
         end)
     end
 end
