@@ -6,6 +6,20 @@ function ActionTracker.init()
     sendDebugMessage("ActionTracker initialized for session: " .. tostring(Utils.current_session_id))
 end
 
+-- function ActionTracker.init_enhanced_hooks()
+--     ActionTracker.hook_hand_actions()
+--     ActionTracker.hook_round_evaluation()
+--     ActionTracker.hook_blind_defeat()
+--     ActionTracker.hook_blind_actions()
+--     ActionTracker.hook_shop_actions()
+--     ActionTracker.hook_booster_actions()
+--     ActionTracker.hook_selling_actions()
+--     ActionTracker.hook_rearrange_actions()
+--     ActionTracker.hook_run_start()
+    
+--     sendDebugMessage("Enhanced ActionTracker hooks initialized")
+-- end
+
 
 function ActionTracker.log_action(action_type, params, card_info)
     
@@ -134,6 +148,7 @@ function ActionTracker.format_params_for_bot(action_type, params, card_info)
         end
         
     elseif action_type == "START_RUN" then
+        sendDebugMessage(tostring(G.GAME.pseudorandom.seed))
         -- Bot expects: action_type, [stake], [deck], [seed], [challenge]
         local stake = {1}
         local deck = {"Red Deck"}
@@ -214,6 +229,32 @@ function ActionTracker.clear_actions_for_new_context(context_type)
     ActionTracker.actions = {}
 end
 
+-- Helper function to get detailed card information
+function ActionTracker.get_played_cards_info(card_positions)
+    local cards_info = {}
+    
+    if not G.hand or not G.hand.cards then
+        return cards_info
+    end
+    
+    for _, pos in ipairs(card_positions) do
+        if G.hand.cards[pos] then
+            local card = G.hand.cards[pos]
+            table.insert(cards_info, {
+                position = pos,
+                rank = card.base and card.base.value or "unknown",
+                suit = card.base and card.base.suit or "unknown",
+                enhancement = card.config and card.config.center and card.config.center.key or nil,
+                edition = card.edition and card.edition.type or nil,
+                seal = card.seal and card.seal.key or nil,
+                chips_added = card:get_chip_bonus() or 0,
+                mult_added = card:get_chip_mult() or 0
+            })
+        end
+    end
+    
+    return cards_info
+end
 
 function ActionTracker.get_hand_score_info()
     local score_info = {
@@ -224,21 +265,46 @@ function ActionTracker.get_hand_score_info()
         hand_level = 0
     }
     
-    -- Try to get the last evaluated hand from game state
-    if G and G.GAME then
-        -- Get current round scoring
-        if G.GAME.current_round then
-            score_info.chips = G.GAME.current_round.chips_total or 0
-            score_info.mult = G.GAME.current_round.mult_total or 0
+    -- Get the actual hand evaluation data from the correct location
+    if G and G.GAME and G.GAME.current_round and G.GAME.current_round.current_hand then
+        local current_hand = G.GAME.current_round.current_hand
+        
+        -- Get hand name from current_hand.handname
+        if current_hand.handname then
+            score_info.hand_name = current_hand.handname
+        end
+        
+        -- Get chips and mult from current_hand
+        if current_hand.chips then
+            score_info.chips = current_hand.chips
+        end
+        
+        if current_hand.mult then
+            score_info.mult = current_hand.mult
+        end
+        
+        -- Get total score from chip_total if available
+        if current_hand.chip_total and current_hand.chip_total ~= 0 then
+            score_info.total_score = current_hand.chip_total
+        elseif score_info.chips > 0 and score_info.mult > 0 then
+            -- Calculate total if chip_total not available
             score_info.total_score = score_info.chips * score_info.mult
         end
         
-        -- Get the last played hand name and level
-        if G.GAME.last_hand_played then
-            score_info.hand_name = G.GAME.last_hand_played
-            if G.GAME.hands and G.GAME.hands[score_info.hand_name] then
-                score_info.hand_level = G.GAME.hands[score_info.hand_name].level or 0
+        -- Extract hand level from hand_level string (format: " Lvl1", " Lvl2", etc.)
+        if current_hand.hand_level and current_hand.hand_level ~= '' then
+            local level_match = string.match(current_hand.hand_level, "(%d+)")
+            if level_match then
+                score_info.hand_level = tonumber(level_match) or 0
             end
+        end
+    end
+    
+    -- Fallback: try to get hand name and level from G.GAME.hands if not found
+    if (score_info.hand_name == "Unknown" or score_info.hand_level == 0) and G.GAME.last_hand_played then
+        score_info.hand_name = G.GAME.last_hand_played
+        if G.GAME.hands and G.GAME.hands[score_info.hand_name] then
+            score_info.hand_level = G.GAME.hands[score_info.hand_name].level or 0
         end
     end
     
@@ -335,9 +401,34 @@ function ActionTracker.detect_hand_type(highlighted_positions)
     return hand_info
 end
 
+function ActionTracker.hook_round_evaluation()
+    -- Hook the round evaluation function to track round completion
+    if G.FUNCS.evaluate_round then
+        G.FUNCS.evaluate_round = Hook.addcallback(G.FUNCS.evaluate_round, function()
+            local round_data = {
+                ante = G.GAME.round_resets.ante or 0,
+                round = G.GAME.round or 0,
+                hands_left = G.GAME.current_round.hands_left or 0,
+                discards_left = G.GAME.current_round.discards_left or 0,
+                chips_scored = G.GAME.chips or 0,
+                blind_chips = G.GAME.blind.chips or 0,
+                blind_name = G.GAME.blind.name or "Unknown",
+                blind_dollars = G.GAME.blind.dollars or 0,
+                player_dollars = G.GAME.dollars or 0,
+                blind_defeated = (G.GAME.chips - G.GAME.blind.chips) >= 0
+            }
+            
+            ActionTracker.log_action("ROUND_COMPLETE", {}, round_data)
+            sendDebugMessage("Round completed - Ante: " .. tostring(round_data.ante) .. 
+                           " Blind: " .. tostring(round_data.blind_name) .. 
+                           " Defeated: " .. tostring(round_data.blind_defeated))
+        end)
+    end
+end
+
 -- track finished hand decisioins
 function ActionTracker.hook_hand_actions()
-    -- Play button - capture action immediately, then wait for scoring
+    -- Play button - capture action with better timing
     if G.FUNCS.play_cards_from_highlighted then
         G.FUNCS.play_cards_from_highlighted = Hook.addcallback(G.FUNCS.play_cards_from_highlighted, function (e)
             local card_positions = {}
@@ -350,33 +441,45 @@ function ActionTracker.hook_hand_actions()
             end
 
             if #card_positions > 0 then
-                -- Get hand type immediately
-                local hand_detection = ActionTracker.detect_hand_type(card_positions)
-                
-                -- Store initial action data
-                local initial_action_data = {
-                    card_positions = card_positions,
-                    predicted_hand = hand_detection.hand_name,
-                    cards_used = hand_detection.cards_used,
-                    pre_play_state = {
-                        chips = G.GAME.chips or 0,
-                        dollars = G.GAME.dollars or 0,
-                        discards_left = G.GAME.current_round and G.GAME.current_round.discards_left or 0,
-                        hands_left = G.GAME.current_round and G.GAME.current_round.hands_left or 0
-                    }
+                -- Capture pre-play state
+                local pre_play_state = {
+                    chips = G.GAME.chips or 0,
+                    dollars = G.GAME.dollars or 0,
+                    discards_left = G.GAME.current_round and G.GAME.current_round.discards_left or 0,
+                    hands_left = G.GAME.current_round and G.GAME.current_round.hands_left or 0,
+                    blind_chips = G.GAME.blind and G.GAME.blind.chips or 0
                 }
                 
-                -- Queue a delayed action to capture the final scoring
+                -- Queue multiple events to capture different stages of hand evaluation
                 G.E_MANAGER:add_event(Event({
                     trigger = 'after',
-                    delay = 0.5,  -- Wait for hand evaluation to complete
+                    delay = 0.1,  -- Quick check for immediate hand detection
                     blocking = false,
                     func = function()
-                        -- Now get the actual scoring results
+                        local early_hand_info = ActionTracker.get_hand_score_info()
+                        sendDebugMessage("Early hand detection: " .. tostring(early_hand_info.hand_name))
+                        return true
+                    end
+                }))
+                
+                G.E_MANAGER:add_event(Event({
+                    trigger = 'after',
+                    delay = 0.8,  -- Wait for complete hand evaluation
+                    blocking = false,
+                    func = function()
+                        -- Get the final scoring results
                         local score_info = ActionTracker.get_hand_score_info()
                         
+                        -- Get post-play state
+                        local post_play_state = {
+                            chips = G.GAME.chips or 0,
+                            dollars = G.GAME.dollars or 0,
+                            discards_left = G.GAME.current_round and G.GAME.current_round.discards_left or 0,
+                            hands_left = G.GAME.current_round and G.GAME.current_round.hands_left or 0
+                        }
+                        
                         local final_action_data = {
-                            cards_used = hand_detection.cards_used,
+                            cards_used = ActionTracker.get_played_cards_info(card_positions),
                             hand_played = {
                                 name = score_info.hand_name,
                                 level = score_info.hand_level,
@@ -384,17 +487,21 @@ function ActionTracker.hook_hand_actions()
                                 mult = score_info.mult,
                                 total_score = score_info.total_score
                             },
-                            game_state_after = {
-                                chips = G.GAME.chips or 0,
-                                dollars = G.GAME.dollars or 0,
-                                discards_left = G.GAME.current_round and G.GAME.current_round.discards_left or 0,
-                                hands_left = G.GAME.current_round and G.GAME.current_round.hands_left or 0
+                            game_state_before = pre_play_state,
+                            game_state_after = post_play_state,
+                            chips_gained = (post_play_state.chips - pre_play_state.chips),
+                            blind_progress = {
+                                before = pre_play_state.chips,
+                                after = post_play_state.chips,
+                                required = pre_play_state.blind_chips,
+                                percentage = math.min(100, (post_play_state.chips / pre_play_state.blind_chips) * 100)
                             }
                         }
                         
                         ActionTracker.log_action("PLAY_HAND", card_positions, final_action_data)
                         sendDebugMessage("Played " .. score_info.hand_name .. 
-                                       " for " .. score_info.total_score .. " points")
+                                       " for " .. score_info.total_score .. " points. " ..
+                                       "Progress: " .. string.format("%.1f", final_action_data.blind_progress.percentage) .. "%")
                         return true
                     end
                 }))
@@ -402,7 +509,7 @@ function ActionTracker.hook_hand_actions()
         end)
     end
 
-    -- Discard button - simpler since no scoring involved
+    -- Discard tracking remains the same but with enhanced state capture
     if G.FUNCS.discard_cards_from_highlighted then
         G.FUNCS.discard_cards_from_highlighted = Hook.addcallback(G.FUNCS.discard_cards_from_highlighted, function (e)
             local card_positions = {}
@@ -430,12 +537,14 @@ function ActionTracker.hook_hand_actions()
                     game_state = {
                         discards_left = G.GAME.current_round and G.GAME.current_round.discards_left or 0,
                         hands_left = G.GAME.current_round and G.GAME.current_round.hands_left or 0,
-                        dollars = G.GAME.dollars or 0
+                        dollars = G.GAME.dollars or 0,
+                        chips = G.GAME.chips or 0
                     }
                 }
                 
                 ActionTracker.log_action("DISCARD_HAND", card_positions, action_data)
-                sendDebugMessage("Discarded " .. #card_positions .. " cards")
+                sendDebugMessage("Discarded " .. #card_positions .. " cards. " ..
+                               "Discards left: " .. tostring(action_data.game_state.discards_left))
             end
         end)
     end
@@ -472,6 +581,33 @@ function ActionTracker.hook_blind_actions()
         G.FUNCS.skip_blind = Hook.addcallback(G.FUNCS.skip_blind, function(e)
             ActionTracker.log_action("SKIP_BLIND", {}, {})
         end)
+    end
+end
+
+-- Hook to track when blinds are actually defeated (separate from selection)
+function ActionTracker.hook_blind_defeat()
+    -- Hook the blind defeat method
+    if Blind and Blind.defeat then
+        local original_defeat = Blind.defeat
+        Blind.defeat = function(self, silent)
+            local defeat_data = {
+                blind_name = self.name or "Unknown",
+                blind_type = self:get_type() or "Unknown",
+                chips_required = self.chips or 0,
+                chips_scored = G.GAME.chips or 0,
+                excess_chips = (G.GAME.chips or 0) - (self.chips or 0),
+                dollars_earned = self.dollars or 0,
+                ante = G.GAME.round_resets.ante or 0,
+                hands_used = (G.GAME.round_resets.hands or 0) - (G.GAME.current_round.hands_left or 0),
+                discards_used = (G.GAME.round_resets.discards or 0) - (G.GAME.current_round.discards_left or 0)
+            }
+            
+            ActionTracker.log_action("BLIND_DEFEATED", {}, defeat_data)
+            sendDebugMessage("Blind defeated: " .. tostring(defeat_data.blind_name) .. 
+                           " with " .. tostring(defeat_data.excess_chips) .. " excess chips")
+            
+            return original_defeat(self, silent)
+        end
     end
 end
 

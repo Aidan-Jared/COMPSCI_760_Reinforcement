@@ -167,7 +167,8 @@ class BalatroDataCollector:
 
             if self.current_session:
                 self.action_data.append(action)
-                print("processed action: {}".format(action.get('state_name')))
+                print("processed action: {}".format(action.get('game_state')))
+                print('\n')
                 
                 # if len(self.action_data) > 10:
                 #     if not self.actions:
@@ -213,6 +214,7 @@ class BalatroDataCollector:
             #     self.gamestate_data = []
 
             print("processed gamestate: {}".format(gamestate))
+            print('\n')
 
             if gamestate.get("game_ended") or gamestate.get("state_name") == "GAME_OVER":
                 print(f"Game ended for session {self.session_id}")

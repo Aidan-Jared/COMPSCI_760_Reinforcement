@@ -151,6 +151,7 @@ function BalatrobotAPI.on_game_start()
 
     if BalatrobotAPI.actions_enabled and ActionTracker then
         ActionTracker.init()
+        -- ActionTracker.init_enhanced_hooks()
     end
 
     sendDebugMessage('New game session started: ' .. Utils.current_session_id)
