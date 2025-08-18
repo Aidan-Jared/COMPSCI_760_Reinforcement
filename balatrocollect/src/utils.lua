@@ -186,13 +186,17 @@ end
 
 function Utils.getDeckData()
     local _deck = { }
-
+    if G and G.deck and G.deck.cards then
+        for i = 1, #G.deck.cards do
+            local _card = Utils.getCardData(G.deck.cards[i])
+            _deck[i] = _card
+        end
+    end
     return _deck
 end
 
 function Utils.getHandData()
     local _hand = { }
-
     if G and G.hand and G.hand.cards then
         for i = 1, #G.hand.cards do
             local _card = Utils.getCardData(G.hand.cards[i])

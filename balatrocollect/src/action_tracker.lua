@@ -285,6 +285,9 @@ function ActionTracker.get_hand_score_info()
         
         -- Get total score from chip_total if available
         if current_hand.chip_total and current_hand.chip_total ~= 0 then
+            sendDebugMessage('\n')
+            sendDebugMessage("total score " .. tostring(current_hand.chip_total))
+            sendDebugMessage('\n')
             score_info.total_score = current_hand.chip_total
         elseif score_info.chips > 0 and score_info.mult > 0 then
             -- Calculate total if chip_total not available
@@ -472,7 +475,7 @@ function ActionTracker.hook_hand_actions()
                         
                         -- Get post-play state
                         local post_play_state = {
-                            chips = G.GAME.chips or 0,
+                            chips = score_info.total_score or 0,
                             dollars = G.GAME.dollars or 0,
                             discards_left = G.GAME.current_round and G.GAME.current_round.discards_left or 0,
                             hands_left = G.GAME.current_round and G.GAME.current_round.hands_left or 0
@@ -499,6 +502,7 @@ function ActionTracker.hook_hand_actions()
                         }
                         
                         ActionTracker.log_action("PLAY_HAND", card_positions, final_action_data)
+
                         sendDebugMessage("Played " .. score_info.hand_name .. 
                                        " for " .. score_info.total_score .. " points. " ..
                                        "Progress: " .. string.format("%.1f", final_action_data.blind_progress.percentage) .. "%")
