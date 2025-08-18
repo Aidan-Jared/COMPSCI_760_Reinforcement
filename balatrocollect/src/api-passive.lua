@@ -38,6 +38,7 @@ function BalatrobotAPI.broadcast_gamestate()
         local _gamestateJsonString = json.encode(_gamestate)
 
         sendDebugMessage("Broadcasting gamestate: " .. _gamestate.state_name .. 
+                         " State id: " .. tostring(G.STATE) ..
                         " (session: " .. tostring(_gamestate.session_id) .. 
                         ", context: " .. tostring(_gamestate.context_id) .. ")")
 

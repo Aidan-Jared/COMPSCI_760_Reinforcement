@@ -184,14 +184,6 @@ class BalatroDataCollector:
     def process_gamestate(self, gamestate):
         '''process received gamestate data'''
         try:
-            # # see if new session
-            # session_id = gamestate.get("session_id")
-            # if session_id and session_id != self.current_session:
-            #     if self.current_session and self.session_data:
-            #         self.save_session_data()
-            #     self.current_session = session_id
-            #     self.session_data = []
-            #     print("session started: ")
             
             # add timestamp if DNE
             if "received_timestamp" not in gamestate:

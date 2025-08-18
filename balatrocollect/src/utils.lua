@@ -180,7 +180,22 @@ function Utils.getCardData(card)
     _card.suit = card.config.card.suit
     _card.value = card.config.card.value
     _card.card_key = card.config.card_key
+    _card.chips = card:get_chip_bonus() or nil
+    _card.mult = card:get_chip_mult() or nil
+    _card.x_mult = card:get_chip_x_mult() or nil
+    _card.x_h_mult = card:get_chip_h_x_mult() or nil
+    _card.seal = card.seal and card.seal.key or nil
+    _card.edition = card.edition and {
+                            type = card.edition.type,
+                            negative = card.edition.negative,
+                            foil = card.edition.foil,
+                            holo = card.edition.holo,
+                            polychrome = card.edition.polychrome
+                        } or nil
 
+    if card.ability.set =='Joker' then
+        _card.ability = card.ability
+    end
     return _card
 end
 
