@@ -616,141 +616,89 @@ function ActionTracker.hook_blind_defeat()
 end
 
 function ActionTracker.hook_shop_actions()
-    -- Shop reroll
+    -- Shop reroll and end shop hooks remain the same
     if G.FUNCS.reroll_shop then
         G.FUNCS.reroll_shop = Hook.addcallback(G.FUNCS.reroll_shop, function(e)
             ActionTracker.log_action("REROLL_SHOP", {}, {})
         end)
     end
     
-    -- End shop
     if G.FUNCS.toggle_shop then
         G.FUNCS.toggle_shop = Hook.addcallback(G.FUNCS.toggle_shop, function(e)
             ActionTracker.log_action("END_SHOP", {}, {})
         end)
     end
     
-    -- Buy joker/card from shop
+    -- This hook now ONLY handles non-booster purchases (Jokers, Vouchers, etc.)
     if G.FUNCS.buy_from_shop then
         G.FUNCS.buy_from_shop = Hook.addcallback(G.FUNCS.buy_from_shop, function(e)
-            -- Get the card from e.config.ref_table (as shown in the original function)
             local card = e.config.ref_table
-        
-            if card and card:is(Card) then
-                local card_data = {
-                    key = card.config.center.key,
-                    name = card.config and card.config.center and card.config.center.name,
-                    set = card.ability and card.ability.set,
-                    cost = card.cost,
-                    edition = card.edition,
-                    seal = card.seal
-                }
-                
-                -- Find position in appropriate shop area
-                local position = nil
-                
-                -- Check jokers
-                if G.shop_jokers and G.shop_jokers.cards then
-                    for i, shop_card in ipairs(G.shop_jokers.cards) do
-                        if shop_card == card then
-                            position = i
-                            card_data.shop_area = "jokers"
-                            break
-                        end
-                    end
-                end
-                
-                -- Check consumables if not found in jokers
-                if not position and G.shop_consumeables and G.shop_consumeables.cards then
-                    for i, shop_card in ipairs(G.shop_consumeables.cards) do
-                        if shop_card == card then
-                            position = i
-                            card_data.shop_area = "consumeables"
-                            break
-                        end
-                    end
-                end
-                
-                -- Check playing cards if not found elsewhere
-                if not position and G.shop_deck and G.shop_deck.cards then
-                    for i, shop_card in ipairs(G.shop_deck.cards) do
-                        if shop_card == card then
-                            position = i
-                            card_data.shop_area = "deck"
-                            break
-                        end
-                    end
-                end
-                
-                if position then
-                    ActionTracker.log_action("BUY_CARD", position, card_data)
-                else
-                    -- Log anyway with available data
-                    ActionTracker.log_action("BUY_CARD", position, card_data)
-                end
-                
-                sendDebugMessage('Bought card: ' .. tostring(card_data.name or card_data.key or "unknown"))
-            else
-                sendDebugMessage('Could not get card data from buy_from_shop event')
+            if not (card and card:is(Card)) then return end
+
+            -- IMPORTANT: Ignore booster packs here, as they are handled by Card:open
+            if card.ability and card.ability.set == 'Booster' then
+                sendDebugMessage("Ignoring booster purchase in buy_from_shop; will be logged on open.")
+                return 
             end
-        end)
-    end
-    
-    -- Buy voucher
-    if G.FUNCS.buy_voucher then
-        local position = nil
-        G.FUNCS.buy_voucher = Hook.addcallback(G.FUNCS.buy_voucher, function(e)
-            local card = e.config.ref_table
+
+            local card_data = {
+                key = card.config.center.key,
+                name = card.config and card.config.center and card.config.center.name,
+                set = card.ability and card.ability.set,
+                cost = card.cost
+            }
             
-            if card and card:is(Card) then
-                local card_data = {
-                    key = card.config.center.key,
-                    name = card.config and card.config.center and card.config.center.name,
-                    cost = card.cost
-                }
-                
-                -- Find position in shop vouchers
+            local position = nil
+            local action_type = "BUY_CARD"
+            
+            if card.ability.set == 'Voucher' then
+                action_type = "BUY_VOUCHER"
                 if G.shop_vouchers and G.shop_vouchers.cards then
-                    for i, voucher_card in ipairs(G.shop_vouchers.cards) do
-                        if voucher_card == card then
-                            position = i
-                            break
-                        end
-                    end
+                    for i, shop_card in ipairs(G.shop_vouchers.cards) do if shop_card == card then position = i; break; end end
                 end
-                
-                ActionTracker.log_action("BUY_VOUCHER", position, card_data)
+            else -- Assumes Jokers, Consumables, or Playing Cards
+                action_type = "BUY_CARD"
+                 if G.shop_jokers and G.shop_jokers.cards then
+                    for i, shop_card in ipairs(G.shop_jokers.cards) do if shop_card == card then position = i; break; end end
+                end
+                if not position and G.shop_consumeables and G.shop_consumeables.cards then
+                    for i, shop_card in ipairs(G.shop_consumeables.cards) do if shop_card == card then position = i; break; end end
+                end
             end
+            
+            ActionTracker.log_action(action_type, position, card_data)
+            sendDebugMessage("Logged shop purchase: " .. action_type .. " - " .. card_data.name)
         end)
     end
-    
-    -- Buy booster pack
-    if G.FUNCS.buy_and_use_consumeable then
-        local position = nil
-        G.FUNCS.buy_and_use_consumeable = Hook.addcallback(G.FUNCS.buy_and_use_consumeable, function(e)
-            local card = e.config.ref_table
-            
-            if card and card:is(Card) then
-                local card_data = {
-                    key = card.config.center.key,
-                    name = card.config and card.config.center and card.config.center.name,
-                    cost = card.cost,
-                    pack_size = card.ability and card.ability.extra
+
+    -- NEW LOGIC: The "BUY_BOOSTER" action is logged when the pack is opened.
+    if Card and Card.open then
+        local original_open = Card.open
+        Card.open = function(self, ...)
+            if self.ability and self.ability.set == "Booster" then
+                local booster_data = {
+                    key = self.config.center.key,
+                    name = self.config and self.config.center and self.config.center.name,
+                    pack_size = self.ability.extra,
+                    cost = self.cost or 0,
+                    pack_type = "unknown"
                 }
-                
-                -- Find position in shop boosters
-                if G.shop_booster and G.shop_booster.cards then
-                    for i, booster_card in ipairs(G.shop_booster.cards) do
-                        if booster_card == card then
-                            position = i
-                            break
-                        end
-                    end
+
+                if self.ability.name:find('Arcana') then booster_data.pack_type = "tarot"
+                elseif self.ability.name:find('Celestial') then booster_data.pack_type = "planet"
+                elseif self.ability.name:find('Spectral') then booster_data.pack_type = "spectral"
+                elseif self.ability.name:find('Standard') then booster_data.pack_type = "standard"
+                elseif self.ability.name:find('Buffoon') then booster_data.pack_type = "buffoon"
                 end
-                
-                ActionTracker.log_action("BUY_BOOSTER", position, card_data)
+
+                -- Per your request, log BUY_BOOSTER at the moment of opening
+                ActionTracker.log_action("BUY_BOOSTER", {}, booster_data)
+                sendDebugMessage("Logged BUY_BOOSTER: " .. booster_data.name .. " (triggered by Card:open)")
             end
-        end)
+            
+            -- Call the original function to ensure the game works correctly
+            return original_open(self, ...)
+        end
     end
 end
 
