@@ -10,11 +10,6 @@ BalatrobotAPI.last_state = nil
 BalatrobotAPI.game_start_time = nil
 BalatrobotAPI.actions_enabled = true -- track player actions
 
-BalatrobotAPI.state_frame_counters = {} -- Track frames since state entered
-BalatrobotAPI.delayed_states = {"SHOP", "TAROT_PACK", "PLANET_PACK", "SPECTRAL_PACK", "STANDARD_PACK", "BUFFOON_PACK"} -- States that need delay
-BalatrobotAPI.delay_frames = 120 -- Number of frames to wait
-BalatrobotAPI.delayed_broadcasts_sent = {}
-BalatrobotAPI.current_tracked_state = nil -- Track current state for frame counting
 
 
 function BalatrobotAPI.broadcast_gamestate()
@@ -34,68 +29,16 @@ function BalatrobotAPI.broadcast_gamestate()
         -- _gamestate.recent_actions = ActionTracker.get_all_actions()
     end
 
-    -- Check if state has changed - compare against a separate tracking variable
-    local state_changed = BalatrobotAPI.current_tracked_state ~= _gamestate.state_name
-
-    -- Debug: Show what's happening with state comparison
-    sendDebugMessage("DEBUG - Current: " .. _gamestate.state_name .. ", Tracked: " .. (BalatrobotAPI.current_tracked_state or "nil") .. ", Changed: " .. tostring(state_changed))
-
-    -- Initialize or update frame counter
-    if state_changed then
-        BalatrobotAPI.current_tracked_state = _gamestate.state_name
-        BalatrobotAPI.state_frame_counters[_gamestate.state_name] = 0
-        BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] = false
-        sendDebugMessage("State changed to: " .. _gamestate.state_name .. " - resetting frame counter to 0")
-    else
-        -- Increment frame counter for current state
-        local current_count = BalatrobotAPI.state_frame_counters[_gamestate.state_name] or 0
-        BalatrobotAPI.state_frame_counters[_gamestate.state_name] = current_count + 1
-        sendDebugMessage("DEBUG - Incremented " .. _gamestate.state_name .. " frame counter: " .. current_count .. " -> " .. BalatrobotAPI.state_frame_counters[_gamestate.state_name])
-    end
-
-    local current_frame_count = BalatrobotAPI.state_frame_counters[_gamestate.state_name]
-    local should_send = false
-
-    if BALATRO_BOT_CONFIG.passive_mode then
-        if BalatrobotAPI.needs_frame_delay(_gamestate.state_name) then
-            -- This state needs delay
-            if BALATRO_BOT_CONFIG.send_all_states then
-                -- Send every frame after delay period
-                if current_frame_count >= BalatrobotAPI.delay_frames then
-                    should_send = true
-                else
-                    sendDebugMessage("Delaying " .. _gamestate.state_name .. " - frame " .. 
-                                   current_frame_count .. "/" .. BalatrobotAPI.delay_frames)
-                end
-            else
-                -- Send only once after delay period
-                if current_frame_count >= BalatrobotAPI.delay_frames and 
-                   not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
-                    should_send = true
-                    BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] = true
-                    sendDebugMessage("Sending delayed broadcast for " .. _gamestate.state_name .. 
-                                   " after " .. BalatrobotAPI.delay_frames .. " frames")
-                elseif current_frame_count < BalatrobotAPI.delay_frames then
-                    sendDebugMessage("Waiting for delay - " .. _gamestate.state_name .. " frame " .. 
-                                   current_frame_count .. "/" .. BalatrobotAPI.delay_frames)
-                end
-            end
-        else
-            -- No delay needed for this state
-            if BALATRO_BOT_CONFIG.send_all_states then
-                should_send = true
-            elseif state_changed then
-                should_send = true
-            end
-        end
-    end
-
-    if should_send then
+    -- Only send if state has changed or in passive mode with send_all_states
+    local state_changed = not BalatrobotAPI.last_state or 
+                         _gamestate.state_name ~= BalatrobotAPI.last_state.state_name --or
+                        --  _gamestate.context_id ~= (BalatrobotAPI.last_state and BalatrobotAPI.last_state.context_id)
+   
+    if BALATRO_BOT_CONFIG.passive_mode and (BALATRO_BOT_CONFIG.send_all_states or state_changed) then
         local _gamestateJsonString = json.encode(_gamestate)
 
         sendDebugMessage("Broadcasting gamestate: " .. _gamestate.state_name .. 
                          " State id: " .. tostring(G.STATE) ..
-                         " Frame: " .. current_frame_count ..
                         " (session: " .. tostring(_gamestate.session_id) .. 
                         ", context: " .. tostring(_gamestate.context_id) .. ")")
 
@@ -109,7 +52,8 @@ function BalatrobotAPI.broadcast_gamestate()
         BalatrobotAPI.last_state = _gamestate
     end
 end
- 
+
+    
 
 function BalatrobotAPI.broadcast_action(action)
     -- send out individual action immediatly
@@ -131,16 +75,6 @@ function BalatrobotAPI.broadcast_action(action)
             BalatrobotAPI.socket:sendto(action_json, client_addr, client_port)
         end
     end
-end
-
--- Helper function to check if a state needs delay
-function BalatrobotAPI.needs_frame_delay(state_name)
-    for _, delayed_state in ipairs(BalatrobotAPI.delayed_states) do
-        if state_name == delayed_state then
-            return true
-        end
-    end
-    return false
 end
 
 function BalatrobotAPI.get_state_name(state)
@@ -187,16 +121,19 @@ function BalatrobotAPI.update(dt)
     local data, msg_or_ip, port_or_nil = BalatrobotAPI.socket:receivefrom()
     if data then
         if data == 'HELLO\n' or data == 'HELLO' then
+            -- register client
             BalatrobotAPI.clients[msg_or_ip] = port_or_nil
             BalatrobotAPI.respond("Connected to passive data stream", msg_or_ip, port_or_nil)
             sendDebugMessage('Client connected: ' .. msg_or_ip .. ':' .. port_or_nil)
             
-            -- Send current state immediately (will respect delay logic)
+            -- Send current state immediately
             BalatrobotAPI.broadcast_gamestate()
         elseif data == 'DISCONNECT\n' or data == 'DISCONNECT' then
+            -- remove client
             BalatrobotAPI.clients[msg_or_ip] = nil
             BalatrobotAPI.respond("Disconnected", msg_or_ip, port_or_nil)
             sendDebugMessage('Client disconnected: ' .. msg_or_ip .. ':' .. port_or_nil)
+
         else
             BalatrobotAPI.respond("Passive mode - commands not accepted", msg_or_ip, port_or_nil)
         end
@@ -204,9 +141,9 @@ function BalatrobotAPI.update(dt)
         sendDebugMessage("Network error: " .. tostring(msg_or_ip))
     end
     
-    -- Always call broadcast_gamestate - it handles the delay logic internally
     BalatrobotAPI.broadcast_gamestate()
 end
+
 
 function BalatrobotAPI.on_game_start()
     -- Reset Utils IDs for new game
@@ -221,7 +158,6 @@ function BalatrobotAPI.on_game_start()
     sendDebugMessage('New game session started: ' .. Utils.current_session_id)
 end
 
--- Clean up frame counters on game end
 function BalatrobotAPI.on_game_end()
     if Utils.current_session_id then
         local final_state = Utils.getGamestate()
@@ -236,10 +172,7 @@ function BalatrobotAPI.on_game_end()
         end
         sendDebugMessage('Game session ended: ' .. Utils.current_session_id)
         
-        -- Clear frame counters
-        BalatrobotAPI.state_frame_counters = {}
-        BalatrobotAPI.delayed_broadcasts_sent = {}
-        BalatrobotAPI.current_tracked_state = nil
+        -- Don't reset IDs here, let the next game start handle it
         BalatrobotAPI.game_start_time = nil
     end
 end
