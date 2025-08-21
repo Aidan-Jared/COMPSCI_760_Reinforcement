@@ -8,6 +8,7 @@ Utils.cached_pack_positions = {}
 Utils.cached_consumable_positions = {}
 Utils.cached_shop_card_positions = {}
 Utils.cached_booster_positions = {}
+Utils.pack_size = nil
 
 Utils.gamestate_counter = 0
 
@@ -302,6 +303,9 @@ end
 function Utils.getHandData()
     local _hand = { }
     if G and G.hand and G.hand.cards then
+        if #G.hand.cards < 1 then
+                return _hand
+            end
         for i = 1, #G.hand.cards do
             local _card = Utils.getCardData(G.hand.cards[i])
             _hand[i] = _card
@@ -364,11 +368,6 @@ function Utils.getAnteData()
     return _ante
 end
 
--- function Utils.getBackData()
---     local _back = { }
-
---     return _back
--- end
 
 function Utils.getShopData()
     local _shop = { }
@@ -400,6 +399,9 @@ function Utils.getPackData()
     
     if G and G.STATE and Utils.isPackState(G.STATE) then
         if G.pack_cards and G.pack_cards.cards then
+            if #G.pack_cards.cards < 1 then
+                return _pack
+            end
             _pack.cards = {}
             for i, card in ipairs(G.pack_cards.cards) do
                 if card and card.config and card.config.center then
@@ -515,12 +517,7 @@ function Utils.getGamestate()
     local _gamestate = Utils.getGameData()
     
     -- Add all context IDs to gamestate
-    -- _gamestate.session_id = Utils.current_session_id
-    -- _gamestate.round_id = Utils.current_round_id
-    -- _gamestate.gamestate_id = Utils.current_gamestate_id
-
-    
-    -- _gamestate.deckback = Utils.getBackData()
+    _gamestate.session_id = Utils.current_session_id
     _gamestate.deck = Utils.getDeckData()
     _gamestate.hand = Utils.getHandData()
     _gamestate.jokers = Utils.getJokersData()

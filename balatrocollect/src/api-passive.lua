@@ -32,11 +32,15 @@ function BalatrobotAPI.broadcast_gamestate()
         end
     end
 
-    local state_changed = BalatrobotAPI.current_tracked_state ~= _gamestate.state_name
+    if not Utils.current_gamestate_id then
+        Utils.current_gamestate_id = Utils.generateGamestateId()
+    end
+    _gamestate.gamestate_id = Utils.current_gamestate_id
+    local state_changed = BalatrobotAPI.current_tracked_state ~= _gamestate.gamestate_id
 
     -- Initialize or update frame counter
     if state_changed then
-        BalatrobotAPI.current_tracked_state = _gamestate.state_name
+        BalatrobotAPI.current_tracked_state = _gamestate.gamestate_id
         BalatrobotAPI.state_frame_counters[_gamestate.state_name] = 0
         BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] = false
         sendDebugMessage("State changed to: " .. _gamestate.state_name .. " - resetting frame counter.")
@@ -58,9 +62,16 @@ function BalatrobotAPI.broadcast_gamestate()
                 end
             else
                 -- Send only once after the delay period
-                if current_frame_count >= BalatrobotAPI.delay_frames and 
+                if G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK then
+                    if current_frame_count >= BalatrobotAPI.delay_frames * 5 and 
                    not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
                     should_send = true
+                    end
+                else
+                    if current_frame_count >= BalatrobotAPI.delay_frames and 
+                   not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
+                    should_send = true
+                    end
                 end
             end
         else
@@ -70,17 +81,31 @@ function BalatrobotAPI.broadcast_gamestate()
             end
         end
     end
-
+    
     -- ROBUSTNESS CHECK: For pack states, ensure the card data is populated before sending.
     -- This check will override the 'should_send' flag if the data is not ready.
     if should_send and Utils.isPackState(G.STATE) then
+        local hand_data_is_read = nil
         local pack_data_is_ready = G.pack_cards and G.pack_cards.cards and #G.pack_cards.cards > 0
-        if not pack_data_is_ready then
-            should_send = false -- Defer the broadcast
-            sendDebugMessage("Pack state (" .. _gamestate.state_name .. ") detected, but pack data is not ready. Deferring broadcast.")
+        if G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK then
+            hand_data_is_read = G.hand and G.hand.cards and #G.hand.cards > 7
+            if not pack_data_is_ready and not hand_data_is_read  then
+                should_send = false -- Defer the broadcast
+                sendDebugMessage("Pack state (" .. _gamestate.state_name .. ") detected, but pack data is not ready. Deferring broadcast.")
+                Utils.pack_size = nil
+            else
+                sendDebugMessage("Pack data is ready for broadcast with " .. #G.pack_cards.cards .. " cards.")
+                Utils.cache_pack_positions()
+            end
         else
-            sendDebugMessage("Pack data is ready for broadcast with " .. #G.pack_cards.cards .. " cards.")
-            Utils.cache_pack_positions()
+            if not pack_data_is_ready  then
+                should_send = false -- Defer the broadcast
+                sendDebugMessage("Pack state (" .. _gamestate.state_name .. ") detected, but pack data is not ready. Deferring broadcast.")
+                Utils.pack_size = nil
+            else
+                sendDebugMessage("Pack data is ready for broadcast with " .. #G.pack_cards.cards .. " cards.")
+                Utils.cache_pack_positions()
+            end
         end
     end
 
@@ -94,12 +119,7 @@ function BalatrobotAPI.broadcast_gamestate()
         Utils.cache_booster_positions()
         Utils.cache_shop_card_positions()
 
-        -- get gamestate id
-        if not Utils.current_gamestate_id then
-            Utils.current_gamestate_id = Utils.generateGamestateId()
-        end
-        _gamestate.gamestate_id = Utils.current_gamestate_id
-        
+        -- get gamestate id       
         local _gamestateJsonString = json.encode(_gamestate)
 
         sendDebugMessage("Broadcasting gamestate: " .. _gamestate.state_name .. 

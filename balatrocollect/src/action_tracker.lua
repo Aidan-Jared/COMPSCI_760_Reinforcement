@@ -644,6 +644,7 @@ function ActionTracker.hook_shop_actions()
                     cost = self.cost or 0,
                     pack_type = "unknown"
                 }
+                Utils.pack_size = self.ability.extra
 
                 if self.ability.name:find('Arcana') then booster_data.pack_type = "tarot"
                 elseif self.ability.name:find('Celestial') then booster_data.pack_type = "planet"
@@ -670,6 +671,7 @@ function ActionTracker.hook_booster_actions()
     if G.FUNCS.skip_booster then
         G.FUNCS.skip_booster = Hook.addcallback(G.FUNCS.skip_booster, function(e)
             ActionTracker.log_action("SKIP_BOOSTER_PACK", {}, {})
+            Utils.pack_size = nil
         end)
     end
     
@@ -677,6 +679,7 @@ function ActionTracker.hook_booster_actions()
     if G.FUNCS.use_card then
         G.FUNCS.use_card = Hook.addcallback(G.FUNCS.use_card, function(e, mute, nosave)
             local card = e.config.ref_table
+            Utils.pack_size = card.pack_size
             
             if card and card:is(Card) then
                 local card_data = {
@@ -707,8 +710,9 @@ function ActionTracker.hook_booster_actions()
                         Utils.cache_pack_positions()
                         position = Utils.get_cached_pack_position(card)
                         if position then
+                            position = position[2]
                             action_type = "SELECT_BOOSTER_CARD"
-                            sendDebugMessage("Found position " .. position[2] .. " after Utils cache refresh")
+                            sendDebugMessage("Found position " .. position .. " after Utils cache refresh")
                         end
                     end
                 end
