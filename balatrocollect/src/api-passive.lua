@@ -27,6 +27,9 @@ function BalatrobotAPI.broadcast_gamestate()
     if G and G.STATE then
         _gamestate.current_state = G.STATE
         _gamestate.state_name = BalatrobotAPI.get_state_name(G.STATE)
+        if _gamestate.state_name == "DRAW_TO_HAND" then
+            return;
+        end
     end
 
     local state_changed = BalatrobotAPI.current_tracked_state ~= _gamestate.state_name
@@ -90,6 +93,12 @@ function BalatrobotAPI.broadcast_gamestate()
         -- save card locations 
         Utils.cache_booster_positions()
         Utils.cache_shop_card_positions()
+
+        -- get gamestate id
+        if not Utils.current_gamestate_id then
+            Utils.current_gamestate_id = Utils.generateGamestateId()
+        end
+        _gamestate.gamestate_id = Utils.current_gamestate_id
         
         local _gamestateJsonString = json.encode(_gamestate)
 

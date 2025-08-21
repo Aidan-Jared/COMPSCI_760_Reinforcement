@@ -2,9 +2,6 @@
 Utils = { }
 
 Utils.current_session_id = nil
-Utils.current_round_id = nil
-Utils.current_blind_id = nil
-Utils.current_shop_id = nil
 Utils.current_gamestate_id = nil
 Utils.previous_state = nil
 Utils.cached_pack_positions = {}
@@ -20,27 +17,6 @@ function Utils.generateSessionId()
     return tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999))
 end
 
-function Utils.generateRoundId()
-    if not Utils.current_session_id then
-        Utils.current_session_id = Utils.generateSessionId()
-    end
-    
-    local round_num = G.GAME and G.GAME.round or 0
-    local ante_num = G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante or 0
-    return Utils.current_session_id .. "_R" .. ante_num .. "-" .. round_num .. "_" .. os.time()
-end
-
--- Blind ID: Generated when entering blind selection or blind context states
-function Utils.generateBlindId()
-    if not Utils.current_session_id then
-        Utils.current_session_id = Utils.generateSessionId()
-    end
-    
-    local round_num = G.GAME and G.GAME.round or 0
-    local ante_num = G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante or 0
-    return Utils.current_session_id .. "_B" .. ante_num .. "-" .. round_num .. "_" .. os.time()
-end
-
 -- Gamestate ID: Generated for each unique gamestate broadcast
 function Utils.generateGamestateId()
     if not Utils.current_session_id then
@@ -51,57 +27,9 @@ function Utils.generateGamestateId()
     return Utils.current_session_id .. "_GS" .. Utils.gamestate_counter .. "_" .. os.time()
 end 
 
--- Shop ID: Generated when entering SHOP state  
-function Utils.generateShopId()
-    if not Utils.current_session_id then
-        Utils.current_session_id = Utils.generateSessionId()
-    end
-    
-    local round_num = G.GAME and G.GAME.round or 0
-    local ante_num = G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante or 0
-    return Utils.current_session_id .. "_S" .. ante_num .. "-" .. round_num .. "_" .. os.time()
-end
-
--- legacy id generators
-function Utils.generateBlindSelectionId()
-    if G and G.GAME and G.STATE == G.STATES.BLIND_SELECT then
-        local blind_id_parts = {
-            tostring(G.GAME.round or 0),
-            tostring(G.GAME.round_resets.ante or 0),
-            tostring(os.time()) -- Add timestamp for uniqueness
-        }
-        
-        -- Add blind choice keys if available (avoid complex objects)
-        if G.GAME.round_resets and G.GAME.round_resets.blind_choices then
-            for i, choice in ipairs(G.GAME.round_resets.blind_choices) do
-                if choice and choice.key then
-                    table.insert(blind_id_parts, tostring(choice.key))
-                end
-            end
-        end
-        
-        return table.concat(blind_id_parts, "_")
-    end
-    return nil
-end
-
--- State context helpers
-function Utils.isBlindContextState(state)
-    return state == G.STATES.BLIND_SELECT or
-           state == G.STATES.SELECTING_HAND or
-           state == G.STATES.HAND_PLAYED or
-           state == G.STATES.DRAW_TO_HAND or
-           state == G.STATES.ROUND_EVAL
-end
-
-function Utils.isShopContextState(state)
-    return state == G.STATES.SHOP or
-           state == G.STATES.TAROT_PACK or
-           state == G.STATES.PLANET_PACK or
-           state == G.STATES.SPECTRAL_PACK or
-           state == G.STATES.STANDARD_PACK or
-           state == G.STATES.BUFFOON_PACK or
-           state == G.STATES.PLAY_TAROT
+function Utils.clearGamestateId()
+    Utils.previous_state = Utils.current_gamestate_id
+    Utils.current_gamestate_id = nil
 end
 
 function Utils.isPackState(state)
@@ -123,24 +51,6 @@ function Utils.getPackTypeFromState(state)
     return pack_types[state] or "unknown"
 end
 
--- ID management based on state transitions
-function Utils.updateContextIds(current_state, previous_state)
-    -- Generate new IDs when entering context states
-    if current_state == G.STATES.NEW_ROUND and (not previous_state or previous_state ~= G.STATES.NEW_ROUND) then
-        Utils.current_round_id = Utils.generateRoundId()
-    end
-    
-    if current_state == G.STATES.BLIND_SELECT and (not previous_state or previous_state ~= G.STATES.BLIND_SELECT) then
-        Utils.current_blind_id = Utils.generateBlindId()
-    end
-    
-    if current_state == G.STATES.SHOP and (not previous_state or previous_state ~= G.STATES.SHOP) then
-        Utils.current_shop_id = Utils.generateShopId()
-    end
-    -- Store previous state for next comparison
-    Utils.previous_state = current_state
-end
-
 -- Initialize session on first call
 function Utils.ensureSessionId()
     if not Utils.current_session_id then
@@ -152,10 +62,6 @@ end
 -- Reset all IDs (for new game)
 function Utils.resetAllIds()
     Utils.current_session_id = Utils.generateSessionId()
-    Utils.current_round_id = nil
-    Utils.current_blind_id = nil
-    Utils.current_shop_id = nil
-    Utils.previous_state = nil
     sendDebugMessage("Reset all IDs, new session: " .. tostring(Utils.current_session_id))
 end
 
@@ -446,20 +352,6 @@ function Utils.getBlindData()
                 mult = G.GAME.blind.mult
             }
         end
-        
-        -- IDs - ensure we have proper blind ID for blind context states
-        if Utils.isBlindContextState(G.STATE) then
-            if not Utils.current_blind_id then
-                Utils.current_blind_id = Utils.generateBlindId()
-                sendDebugMessage("Generated blind ID in getBlindData: " .. tostring(Utils.current_blind_id))
-            end
-            _blinds.blind_id = Utils.current_blind_id
-        end
-        
-        -- Legacy selection ID for backward compatibility
-        if G.STATE == G.STATES.BLIND_SELECT then
-            _blinds.selection_id = Utils.generateBlindSelectionId()
-        end
     end
 
     return _blinds
@@ -499,16 +391,6 @@ function Utils.getShopData()
     for i = 1, #G.shop_vouchers.cards do
         _shop.vouchers[i] = Utils.getCardData(G.shop_vouchers.cards[i])
     end
-
-    -- Ensure we have shop ID for shop context states
-    if Utils.isShopContextState(G.STATE) then
-        if not Utils.current_shop_id then
-            Utils.current_shop_id = Utils.generateShopId()
-            sendDebugMessage("Generated shop ID in getShopData: " .. tostring(Utils.current_shop_id))
-        end
-        _shop.shop_id = Utils.current_shop_id
-    end
-
     return _shop
 end
 
@@ -629,40 +511,14 @@ function Utils.getGamestate()
     -- Ensure session ID exists
     Utils.ensureSessionId()
     
-    -- Update context IDs based on current state
-    if G and G.STATE then
-        Utils.updateContextIds(G.STATE, Utils.previous_state)
-    end
-
-    Utils.current_gamestate_id = Utils.generateGamestateId()
     
     local _gamestate = Utils.getGameData()
     
     -- Add all context IDs to gamestate
-    _gamestate.session_id = Utils.current_session_id
-    _gamestate.round_id = Utils.current_round_id
-    _gamestate.gamestate_id = Utils.current_gamestate_id
-    
-    -- Add context-specific IDs based on current state
-    if G and G.STATE then
-        if Utils.isBlindContextState(G.STATE) then
-            if not Utils.current_blind_id then
-                Utils.current_blind_id = Utils.generateBlindId()
-                sendDebugMessage("Generated blind ID in getGamestate: " .. tostring(Utils.current_blind_id))
-            end
-            _gamestate.blind_id = Utils.current_blind_id
-            _gamestate.context_id = Utils.current_blind_id
-            _gamestate.context_type = "blind_session"
-        elseif Utils.isShopContextState(G.STATE) then
-            if not Utils.current_shop_id then
-                Utils.current_shop_id = Utils.generateShopId()
-                sendDebugMessage("Generated shop ID in getGamestate: " .. tostring(Utils.current_shop_id))
-            end
-            _gamestate.shop_id = Utils.current_shop_id
-            _gamestate.context_id = Utils.current_shop_id
-            _gamestate.context_type = "shop_session"
-        end
-    end
+    -- _gamestate.session_id = Utils.current_session_id
+    -- _gamestate.round_id = Utils.current_round_id
+    -- _gamestate.gamestate_id = Utils.current_gamestate_id
+
     
     -- _gamestate.deckback = Utils.getBackData()
     _gamestate.deck = Utils.getDeckData()

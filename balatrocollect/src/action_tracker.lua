@@ -9,48 +9,21 @@ end
 function ActionTracker.log_action(action_type, params, card_info)
     
     Utils.ensureSessionId()
-
-    local current_context_ids = Utils.getCurrentContextIds()
     
     local formatted_params = ActionTracker.format_params_for_bot(action_type, params, card_info)
 
     local action = {
         timestamp = os.time(),
         game_time = BalatrobotAPI.game_start_time and (os.time() - BalatrobotAPI.game_start_time) or 0,
-        session_id = current_context_ids.session_id,
-        gamestate_id = current_context_ids.gamestate_id,
+        session_id = Utils.current_session_id,
+        gamestate_id = Utils.current_gamestate_id,
         action = action_type,
         params = formatted_params,
         card_info = card_info or {},
         game_state = G.STATE and BalatrobotAPI.get_state_name(G.STATE) or "UNKNOWN",
     }
 
-    -- add all avaliable context ids
-    if current_context_ids.round_id then
-        action.round_id = current_context_ids.round_id
-    end
-
-    -- Use the most relevant context ID based on current state
-    if G and G.STATE then
-        if Utils.isBlindContextState(G.STATE) and current_context_ids.blind_id then
-            action.context_id = current_context_ids.blind_id
-            action.context_type = "blind_session"
-            action.blind_id = current_context_ids.blind_id
-        elseif Utils.isShopContextState(G.STATE) and current_context_ids.shop_id then
-            action.context_id = current_context_ids.shop_id
-            action.context_type = "shop_session"  
-            action.shop_id = current_context_ids.shop_id
-        -- Fallback to any available context ID
-        elseif current_context_ids.shop_id then
-            action.context_id = current_context_ids.shop_id
-            action.context_type = "shop_session"
-            action.shop_id = current_context_ids.shop_id
-        elseif current_context_ids.blind_id then
-            action.context_id = current_context_ids.blind_id
-            action.context_type = "blind_session"
-            action.blind_id = current_context_ids.blind_id
-        end
-    end
+    Utils.clearGamestateId()
 
     table.insert(ActionTracker.actions, action)
     sendDebugMessage("Action logged: " .. action_type .. " with context: " .. tostring(action.context_id or "none"))
@@ -720,7 +693,7 @@ function ActionTracker.hook_booster_actions()
                 
                 -- If we're in a pack state, always check Utils cached positions first
                 if Utils.isPackState(G.STATE) then
-                    position = Utils.get_cached_pack_position(card)[2]
+                    position = Utils.get_cached_pack_position(card)
 
                     if position and card.ability.consumeable and not (card.ability.set == 'Voucher') then
                         action_type = "USE_CONSUMABLE"
@@ -735,7 +708,7 @@ function ActionTracker.hook_booster_actions()
                         position = Utils.get_cached_pack_position(card)
                         if position then
                             action_type = "SELECT_BOOSTER_CARD"
-                            sendDebugMessage("Found position " .. position .. " after Utils cache refresh")
+                            sendDebugMessage("Found position " .. position[2] .. " after Utils cache refresh")
                         end
                     end
                 end
