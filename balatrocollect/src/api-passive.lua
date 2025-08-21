@@ -15,7 +15,8 @@ BalatrobotAPI.delayed_states = {"SHOP", "TAROT_PACK", "PLANET_PACK", "SPECTRAL_P
 BalatrobotAPI.delay_frames = 120 -- Number of frames to wait
 BalatrobotAPI.delayed_broadcasts_sent = {}
 BalatrobotAPI.current_tracked_state = nil -- Track current state for frame counting
-
+BalatrobotAPI.first_entry_per_round = {}
+BalatrobotAPI.current_round_key = nil
 
 function BalatrobotAPI.broadcast_gamestate()
     local _gamestate = Utils.getGamestate()
@@ -38,6 +39,14 @@ function BalatrobotAPI.broadcast_gamestate()
     _gamestate.gamestate_id = Utils.current_gamestate_id
     local state_changed = BalatrobotAPI.current_tracked_state ~= _gamestate.gamestate_id
 
+    -- NEW: Track round changes to reset first_entry tracking
+    local round_key = tostring(G.GAME.round) .. "_" .. tostring(G.GAME.round_resets.ante)
+    if BalatrobotAPI.current_round_key ~= round_key then
+        BalatrobotAPI.current_round_key = round_key
+        BalatrobotAPI.first_entry_per_round = {} -- Reset first entry tracking for new round
+        sendDebugMessage("New round detected (" .. round_key .. ") - reset first entry tracking")
+    end
+
     -- Initialize or update frame counter
     if state_changed then
         BalatrobotAPI.current_tracked_state = _gamestate.gamestate_id
@@ -54,24 +63,41 @@ function BalatrobotAPI.broadcast_gamestate()
 
     if BALATRO_BOT_CONFIG.passive_mode then
         if BalatrobotAPI.needs_frame_delay(_gamestate.state_name) then
-            -- This state requires a delay
-            if BALATRO_BOT_CONFIG.send_all_states then
-                if current_frame_count >= BalatrobotAPI.delay_frames then
-                    should_send = true
-
-                end
-            else
-                -- Send only once after the delay period
-                if G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK then
-                    if current_frame_count >= BalatrobotAPI.delay_frames * 5 and 
-                   not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
-                    should_send = true
+            -- NEW: Check if this is the first entry to this state in current round
+            local is_first_entry = not BalatrobotAPI.first_entry_per_round[_gamestate.state_name]
+            
+            if is_first_entry then
+                -- First entry - apply delay as before
+                if BALATRO_BOT_CONFIG.send_all_states then
+                    if current_frame_count >= BalatrobotAPI.delay_frames then
+                        should_send = true
+                        BalatrobotAPI.first_entry_per_round[_gamestate.state_name] = true
                     end
                 else
-                    if current_frame_count >= BalatrobotAPI.delay_frames and 
-                   not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
-                    should_send = true
+                    -- Send only once after the delay period
+                    if G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK then
+                        if current_frame_count >= BalatrobotAPI.delay_frames * 5 and 
+                       not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
+                        should_send = true
+                        BalatrobotAPI.first_entry_per_round[_gamestate.state_name] = true
+                        end
+                    else
+                        if current_frame_count >= BalatrobotAPI.delay_frames and 
+                       not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
+                        should_send = true
+                        BalatrobotAPI.first_entry_per_round[_gamestate.state_name] = true
+                        end
                     end
+                end
+                
+                if should_send then
+                    sendDebugMessage("First entry to " .. _gamestate.state_name .. " - sent after delay of " .. current_frame_count .. " frames")
+                end
+            else
+                -- Subsequent entry in same round - no delay, send immediately
+                if BALATRO_BOT_CONFIG.send_all_states or state_changed then
+                    should_send = true
+                    sendDebugMessage("Subsequent entry to " .. _gamestate.state_name .. " in same round - sent immediately")
                 end
             end
         else
@@ -235,18 +261,31 @@ function BalatrobotAPI.update(dt)
     BalatrobotAPI.broadcast_gamestate()
 end
 
-function BalatrobotAPI.on_game_start()
-    -- Reset Utils IDs for new game
-    Utils.resetAllIds()
-    BalatrobotAPI.game_start_time = os.time()
+-- Clean up frame counters on game end
+function BalatrobotAPI.on_game_end()
+    if Utils.current_session_id then
+        local final_state = Utils.getGamestate()
+        final_state.game_end = true
+        final_state.final_timestamp = os.time()
 
-    if BalatrobotAPI.actions_enabled and ActionTracker then
-        ActionTracker.init()
-        -- ActionTracker.init_enhanced_hooks()
+        local final_json = json.encode(final_state)
+        for client_addr, client_port in pairs(BalatrobotAPI.clients) do
+            if BalatrobotAPI.socket then
+                BalatrobotAPI.socket:sendto(final_json, client_addr, client_port)
+            end
+        end
+        sendDebugMessage('Game session ended: ' .. Utils.current_session_id)
+        
+        -- Clear frame counters and first entry tracking
+        BalatrobotAPI.state_frame_counters = {}
+        BalatrobotAPI.delayed_broadcasts_sent = {}
+        BalatrobotAPI.first_entry_per_round = {} -- NEW: Clear first entry tracking
+        BalatrobotAPI.current_tracked_state = nil
+        BalatrobotAPI.current_round_key = nil -- NEW: Clear round tracking
+        BalatrobotAPI.game_start_time = nil
     end
-
-    sendDebugMessage('New game session started: ' .. Utils.current_session_id)
 end
+
 
 -- Clean up frame counters on game end
 function BalatrobotAPI.on_game_end()
@@ -263,13 +302,16 @@ function BalatrobotAPI.on_game_end()
         end
         sendDebugMessage('Game session ended: ' .. Utils.current_session_id)
         
-        -- Clear frame counters
+        -- Clear frame counters and first entry tracking
         BalatrobotAPI.state_frame_counters = {}
         BalatrobotAPI.delayed_broadcasts_sent = {}
+        BalatrobotAPI.first_entry_per_round = {} -- NEW: Clear first entry tracking
         BalatrobotAPI.current_tracked_state = nil
+        BalatrobotAPI.current_round_key = nil -- NEW: Clear round tracking
         BalatrobotAPI.game_start_time = nil
     end
 end
+
 
 function BalatrobotAPI.init()
     love.update = Hook.addcallback(love.update, BalatrobotAPI.update)
