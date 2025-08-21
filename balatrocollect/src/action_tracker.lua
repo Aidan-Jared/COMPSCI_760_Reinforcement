@@ -6,21 +6,6 @@ function ActionTracker.init()
     sendDebugMessage("ActionTracker initialized for session: " .. tostring(Utils.current_session_id))
 end
 
--- function ActionTracker.init_enhanced_hooks()
---     ActionTracker.hook_hand_actions()
---     ActionTracker.hook_round_evaluation()
---     ActionTracker.hook_blind_defeat()
---     ActionTracker.hook_blind_actions()
---     ActionTracker.hook_shop_actions()
---     ActionTracker.hook_booster_actions()
---     ActionTracker.hook_selling_actions()
---     ActionTracker.hook_rearrange_actions()
---     ActionTracker.hook_run_start()
-    
---     sendDebugMessage("Enhanced ActionTracker hooks initialized")
--- end
-
-
 function ActionTracker.log_action(action_type, params, card_info)
     
     Utils.ensureSessionId()
@@ -221,7 +206,6 @@ function ActionTracker.create_bot_action(action_type, params, card_info)
     
     return bot_action
 end
-
 
 -- Clear actions when starting new context sessions
 function ActionTracker.clear_actions_for_new_context(context_type)
@@ -626,6 +610,9 @@ function ActionTracker.hook_shop_actions()
     if G.FUNCS.toggle_shop then
         G.FUNCS.toggle_shop = Hook.addcallback(G.FUNCS.toggle_shop, function(e)
             ActionTracker.log_action("END_SHOP", {}, {})
+            -- removed saved data from booster and shop card
+            Utils.clear_booster_positions()
+            Utils.clear_shop_card_positions()
         end)
     end
     
@@ -659,10 +646,10 @@ function ActionTracker.hook_shop_actions()
             else -- Assumes Jokers, Consumables, or Playing Cards
                 action_type = "BUY_CARD"
                  if G.shop_jokers and G.shop_jokers.cards then
-                    for i, shop_card in ipairs(G.shop_jokers.cards) do if shop_card == card then position = i; break; end end
+                    position = Utils.get_cached_shop_card_position(card)
                 end
                 if not position and G.shop_consumeables and G.shop_consumeables.cards then
-                    for i, shop_card in ipairs(G.shop_consumeables.cards) do if shop_card == card then position = i; break; end end
+                    position = Utils.get_cached_shop_card_position(card)
                 end
             end
             
@@ -673,6 +660,7 @@ function ActionTracker.hook_shop_actions()
 
     -- NEW LOGIC: The "BUY_BOOSTER" action is logged when the pack is opened.
     if Card and Card.open then
+        local position = nil
         local original_open = Card.open
         Card.open = function(self, ...)
             if self.ability and self.ability.set == "Booster" then
@@ -691,8 +679,9 @@ function ActionTracker.hook_shop_actions()
                 elseif self.ability.name:find('Buffoon') then booster_data.pack_type = "buffoon"
                 end
 
+                position = Utils.get_cached_booster_position(self)
                 -- Per your request, log BUY_BOOSTER at the moment of opening
-                ActionTracker.log_action("BUY_BOOSTER", {}, booster_data)
+                ActionTracker.log_action("BUY_BOOSTER", position, booster_data)
                 sendDebugMessage("Logged BUY_BOOSTER: " .. booster_data.name .. " (triggered by Card:open)")
             end
             
@@ -702,7 +691,7 @@ function ActionTracker.hook_shop_actions()
     end
 end
 
--- Track booster pack decisions
+-- Track booster pack decisions using Utils position caching
 function ActionTracker.hook_booster_actions()
     -- Skip booster pack
     if G.FUNCS.skip_booster then
@@ -711,7 +700,7 @@ function ActionTracker.hook_booster_actions()
         end)
     end
     
-    -- Use card (comprehensive tracking)
+    -- Use card (simplified to focus on booster pack selections)
     if G.FUNCS.use_card then
         G.FUNCS.use_card = Hook.addcallback(G.FUNCS.use_card, function(e, mute, nosave)
             local card = e.config.ref_table
@@ -726,78 +715,54 @@ function ActionTracker.hook_booster_actions()
                     seal = card.seal
                 }
                 
-                -- Determine the action type based on card set and context
                 local action_type = nil
                 local position = nil
                 
-                -- Check if it's a booster pack selection
-                if G.pack_cards and G.pack_cards.cards then
-                    for i, pack_card in ipairs(G.pack_cards.cards) do
-                        if pack_card == card then
-                            position = i
-                            action_type = "SELECT_BOOSTER_CARD"
-                            break
-                        end
-                    end
-                end
-                
-                -- If not from pack, determine by card type and area
-                if not action_type then
-                    if card.ability.set == 'Booster' then
-                        action_type = "USE_BOOSTER_PACK"
-                        -- Find position in shop boosters or consumeables
-                        if G.shop_booster and G.shop_booster.cards then
-                            for i, booster_card in ipairs(G.shop_booster.cards) do
-                                if booster_card == card then
-                                    position = i
-                                    break
-                                end
-                            end
-                        elseif G.consumeables and G.consumeables.cards then
-                            for i, consumeable_card in ipairs(G.consumeables.cards) do
-                                if consumeable_card == card then
-                                    position = i
-                                    break
-                                end
-                            end
-                        end
-                        
-                    elseif card.ability.consumeable then
+                -- If we're in a pack state, always check Utils cached positions first
+                if Utils.isPackState(G.STATE) then
+                    position = Utils.get_cached_pack_position(card)[2]
+
+                    if position and card.ability.consumeable and not (card.ability.set == 'Voucher') then
                         action_type = "USE_CONSUMABLE"
-                        -- Find position in consumeables area
-                        if G.consumeables and G.consumeables.cards then
-                            for i, consumeable_card in ipairs(G.consumeables.cards) do
-                                if consumeable_card == card then
-                                    position = i
-                                    break
-                                end
-                            end
+
+                    elseif position then
+                        action_type = "SELECT_BOOSTER_CARD"
+                        sendDebugMessage("Using Utils cached position " .. position .. " for " .. (card_data.name or "unknown card"))
+                    else
+                        sendDebugMessage("Warning: Card not found in Utils position cache")
+                        -- Fallback: try to refresh cache and look again
+                        Utils.cache_pack_positions()
+                        position = Utils.get_cached_pack_position(card)
+                        if position then
+                            action_type = "SELECT_BOOSTER_CARD"
+                            sendDebugMessage("Found position " .. position .. " after Utils cache refresh")
                         end
-                        
-                    elseif card.ability.set == 'Voucher' then
-                        action_type = "USE_VOUCHER"
-                        -- Find position in shop vouchers
-                        if G.shop_vouchers and G.shop_vouchers.cards then
-                            for i, voucher_card in ipairs(G.shop_vouchers.cards) do
-                                if voucher_card == card then
-                                    position = i
-                                    break
-                                end
-                            end
-                        end
-                        
-                    elseif card.ability.set == 'Enhanced' or card.ability.set == 'Default' then
-                        action_type = "ADD_PLAYING_CARD"
-                        -- This is adding a playing card to deck (from booster pack usually)
-                        
-                    elseif card.ability.set == 'Joker' then
-                        action_type = "ADD_JOKER"
-                        -- This is adding a joker to collection (from booster pack usually)
                     end
                 end
                 
-                -- Get highlighted hand cards for consumables that target cards
-                if card.ability.consumeable or action_type == "USE_CONSUMABLE" then
+                -- Only check other areas if we're not in a pack state or didn't find position
+                if not action_type then
+                    if card.ability.consumeable and not (card.ability.set == 'Voucher') then
+                        -- Always use Utils cached position for consumables
+                        position = Utils.get_cached_consumable_position(card)
+                        if position then
+                            action_type = "USE_CONSUMABLE"
+                            sendDebugMessage("Using Utils cached consumable position " .. position .. " for " .. (card_data.name or "unknown card"))
+                        else
+                            sendDebugMessage("Warning: Consumable not found in Utils position cache")
+                            -- Fallback: try to refresh cache and look again
+                            Utils.cache_consumable_positions()
+                            position = Utils.get_cached_consumable_position(card)
+                            if position then
+                                action_type = "USE_CONSUMABLE"
+                                sendDebugMessage("Found consumable position " .. position .. " after Utils cache refresh")
+                            end
+                        end
+                    end
+                end
+                
+                -- Get highlighted hand cards for consumables that need targeting
+                if card.ability.consumeable and not (card.ability.set == 'Voucher') then
                     local highlighted_positions = {}
                     if G.hand and G.hand.cards then
                         for j, hand_card in ipairs(G.hand.cards) do
@@ -809,14 +774,15 @@ function ActionTracker.hook_booster_actions()
                     card_data.highlighted_hand_positions = highlighted_positions
                 end
                 
-                -- Add position if found
-                
-                -- Log the action if we identified it
+                -- Log the action
                 if action_type then
                     ActionTracker.log_action(action_type, position, card_data)
+                    sendDebugMessage("Logged " .. action_type .. " at position " .. tostring(position or "unknown") .. 
+                                   " for " .. (card_data.name or "unknown card"))
                 else
                     -- Fallback for unknown card usage
                     ActionTracker.log_action("USE_CARD_UNKNOWN", position, card_data)
+                    sendDebugMessage("Unknown card usage logged for " .. (card_data.name or "unknown card"))
                 end
             end
         end)

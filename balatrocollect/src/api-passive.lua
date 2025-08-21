@@ -29,28 +29,17 @@ function BalatrobotAPI.broadcast_gamestate()
         _gamestate.state_name = BalatrobotAPI.get_state_name(G.STATE)
     end
 
-    -- Add recent actions if action tracking enabled
-    if BalatrobotAPI.actions_enabled and ActionTracker then
-        -- _gamestate.recent_actions = ActionTracker.get_all_actions()
-    end
-
-    -- Check if state has changed - compare against a separate tracking variable
     local state_changed = BalatrobotAPI.current_tracked_state ~= _gamestate.state_name
-
-    -- Debug: Show what's happening with state comparison
-    sendDebugMessage("DEBUG - Current: " .. _gamestate.state_name .. ", Tracked: " .. (BalatrobotAPI.current_tracked_state or "nil") .. ", Changed: " .. tostring(state_changed))
 
     -- Initialize or update frame counter
     if state_changed then
         BalatrobotAPI.current_tracked_state = _gamestate.state_name
         BalatrobotAPI.state_frame_counters[_gamestate.state_name] = 0
         BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] = false
-        sendDebugMessage("State changed to: " .. _gamestate.state_name .. " - resetting frame counter to 0")
+        sendDebugMessage("State changed to: " .. _gamestate.state_name .. " - resetting frame counter.")
     else
-        -- Increment frame counter for current state
         local current_count = BalatrobotAPI.state_frame_counters[_gamestate.state_name] or 0
         BalatrobotAPI.state_frame_counters[_gamestate.state_name] = current_count + 1
-        sendDebugMessage("DEBUG - Incremented " .. _gamestate.state_name .. " frame counter: " .. current_count .. " -> " .. BalatrobotAPI.state_frame_counters[_gamestate.state_name])
     end
 
     local current_frame_count = BalatrobotAPI.state_frame_counters[_gamestate.state_name]
@@ -58,46 +47,55 @@ function BalatrobotAPI.broadcast_gamestate()
 
     if BALATRO_BOT_CONFIG.passive_mode then
         if BalatrobotAPI.needs_frame_delay(_gamestate.state_name) then
-            -- This state needs delay
+            -- This state requires a delay
             if BALATRO_BOT_CONFIG.send_all_states then
-                -- Send every frame after delay period
                 if current_frame_count >= BalatrobotAPI.delay_frames then
                     should_send = true
-                else
-                    sendDebugMessage("Delaying " .. _gamestate.state_name .. " - frame " .. 
-                                   current_frame_count .. "/" .. BalatrobotAPI.delay_frames)
+
                 end
             else
-                -- Send only once after delay period
+                -- Send only once after the delay period
                 if current_frame_count >= BalatrobotAPI.delay_frames and 
                    not BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] then
                     should_send = true
-                    BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] = true
-                    sendDebugMessage("Sending delayed broadcast for " .. _gamestate.state_name .. 
-                                   " after " .. BalatrobotAPI.delay_frames .. " frames")
-                elseif current_frame_count < BalatrobotAPI.delay_frames then
-                    sendDebugMessage("Waiting for delay - " .. _gamestate.state_name .. " frame " .. 
-                                   current_frame_count .. "/" .. BalatrobotAPI.delay_frames)
                 end
             end
         else
             -- No delay needed for this state
-            if BALATRO_BOT_CONFIG.send_all_states then
-                should_send = true
-            elseif state_changed then
+            if BALATRO_BOT_CONFIG.send_all_states or state_changed then
                 should_send = true
             end
         end
     end
 
+    -- ROBUSTNESS CHECK: For pack states, ensure the card data is populated before sending.
+    -- This check will override the 'should_send' flag if the data is not ready.
+    if should_send and Utils.isPackState(G.STATE) then
+        local pack_data_is_ready = G.pack_cards and G.pack_cards.cards and #G.pack_cards.cards > 0
+        if not pack_data_is_ready then
+            should_send = false -- Defer the broadcast
+            sendDebugMessage("Pack state (" .. _gamestate.state_name .. ") detected, but pack data is not ready. Deferring broadcast.")
+        else
+            sendDebugMessage("Pack data is ready for broadcast with " .. #G.pack_cards.cards .. " cards.")
+            Utils.cache_pack_positions()
+        end
+    end
+
     if should_send then
+        -- If this is a delayed broadcast being sent for the first time, set the flag now
+        if BalatrobotAPI.needs_frame_delay(_gamestate.state_name) and not BALATRO_BOT_CONFIG.send_all_states then
+             BalatrobotAPI.delayed_broadcasts_sent[_gamestate.state_name] = true
+             sendDebugMessage("Setting 'sent' flag for delayed broadcast of " .. _gamestate.state_name)
+        end
+        -- save card locations 
+        Utils.cache_booster_positions()
+        Utils.cache_shop_card_positions()
+        
         local _gamestateJsonString = json.encode(_gamestate)
 
         sendDebugMessage("Broadcasting gamestate: " .. _gamestate.state_name .. 
-                         " State id: " .. tostring(G.STATE) ..
-                         " Frame: " .. current_frame_count ..
-                        " (session: " .. tostring(_gamestate.session_id) .. 
-                        ", context: " .. tostring(_gamestate.context_id) .. ")")
+                         " (session: " .. tostring(_gamestate.session_id) .. 
+                         ", context: " .. tostring(_gamestate.context_id) .. ")")
 
         -- Broadcast to all connected clients
         for client_addr, client_port in pairs(BalatrobotAPI.clients) do

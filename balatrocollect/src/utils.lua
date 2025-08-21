@@ -7,6 +7,10 @@ Utils.current_blind_id = nil
 Utils.current_shop_id = nil
 Utils.current_gamestate_id = nil
 Utils.previous_state = nil
+Utils.cached_pack_positions = {}
+Utils.cached_consumable_positions = {}
+Utils.cached_shop_card_positions = {}
+Utils.cached_booster_positions = {}
 
 Utils.gamestate_counter = 0
 
@@ -133,15 +137,8 @@ function Utils.updateContextIds(current_state, previous_state)
     if current_state == G.STATES.SHOP and (not previous_state or previous_state ~= G.STATES.SHOP) then
         Utils.current_shop_id = Utils.generateShopId()
     end
-    
-    -- Clear context IDs when leaving contexts
-    if previous_state and Utils.isBlindContextState(previous_state) and not Utils.isBlindContextState(current_state) then
-        -- Keep blind_id for historical reference, don't clear it
-    end
-    
-    if previous_state and Utils.isShopContextState(previous_state) and not Utils.isShopContextState(current_state) then
-        -- Keep shop_id for historical reference, don't clear it
-    end
+    -- Store previous state for next comparison
+    Utils.previous_state = current_state
 end
 
 -- Initialize session on first call
@@ -172,6 +169,88 @@ function Utils.getCurrentContextIds()
     }
 end
 
+function Utils.cache_pack_positions()
+    Utils.cached_pack_positions = {}
+    
+    if G and G.STATE and Utils.isPackState(G.STATE) then
+        if G.pack_cards and G.pack_cards.cards then
+            for i, card in ipairs(G.pack_cards.cards) do
+                if card and card.config and card.config.center then
+                    -- Store by direct card reference
+                    Utils.cached_pack_positions[card] = i
+                    
+                    -- Also store by card key as backup
+                    local card_key = card.config.center.key
+                    if card_key then
+                        Utils.cached_pack_positions[card_key .. "_" .. tostring(card)] = i
+                    end
+                end
+            end
+            sendDebugMessage("Cached pack positions for " .. #G.pack_cards.cards .. " cards")
+        end
+    end
+end
+
+function Utils.cache_consumable_positions()
+    Utils.cached_consumable_positions = {}
+    
+    if G and G.consumeables and G.consumeables.cards then
+        for i, card in ipairs(G.consumeables.cards) do
+            if card and card.config and card.config.center then
+                -- Store by direct card reference
+                Utils.cached_consumable_positions[card] = i
+                
+                -- Also store by card key as backup
+                local card_key = card.config.center.key
+                if card_key then
+                    Utils.cached_consumable_positions[card_key .. "_" .. tostring(card)] = i
+                end
+            end
+        end
+        sendDebugMessage("Cached consumable positions for " .. #G.consumeables.cards .. " cards")
+    end
+end
+
+function Utils.cache_shop_card_positions()
+    Utils.cached_shop_card_positions = {}
+    
+    if G and G.shop_jokers and G.shop_jokers.cards then
+        for i, card in ipairs(G.shop_jokers.cards) do
+            if card and card.config and card.config.center then
+                -- Store by direct card reference
+                Utils.cached_shop_card_positions[card] = i
+                
+                -- Also store by card key as backup
+                local card_key = card.config.center.key
+                if card_key then
+                    Utils.cached_shop_card_positions[card_key .. "_" .. tostring(card)] = i
+                end
+            end
+        end
+        sendDebugMessage("Cached joker positions for " .. #G.shop_jokers.cards .. " cards")
+    end
+end
+
+function Utils.cache_booster_positions()
+    Utils.cached_booster_positions = {}
+    
+    if G and G.shop_booster and G.shop_booster.cards then
+        for i, card in ipairs(G.shop_booster.cards) do
+            if card and card.config and card.config.center then
+                -- Store by direct card reference
+                Utils.cached_booster_positions[card] = i
+                
+                -- Also store by card key as backup
+                local card_key = card.config.center.key
+                if card_key then
+                    Utils.cached_booster_positions[card_key .. "_" .. tostring(card)] = i
+                end
+            end
+        end
+        sendDebugMessage("Cached booster positions for " .. #G.shop_booster.cards .. " cards")
+    end
+end
+
 function Utils.getCardData(card)
     local _card = { }
 
@@ -197,6 +276,110 @@ function Utils.getCardData(card)
         _card.ability = card.ability
     end
     return _card
+end
+
+function Utils.get_cached_pack_position(card)
+    if not card then return nil end
+    
+    -- Direct lookup by card reference
+    local position = Utils.cached_pack_positions[card]
+    if position then
+        return position
+    end
+    
+    -- Backup lookup by key + card reference
+    local card_key = card.config and card.config.center and card.config.center.key
+    if card_key then
+        local backup_position = Utils.cached_pack_positions[card_key .. "_" .. tostring(card)]
+        if backup_position then
+            return backup_position
+        end
+    end
+    
+    return nil
+end
+
+function Utils.get_cached_consumable_position(card)
+    if not card then return nil end
+    
+    -- Direct lookup by card reference
+    local position = Utils.cached_consumable_positions[card]
+    if position then
+        return position
+    end
+    
+    -- Backup lookup by key + card reference
+    local card_key = card.config and card.config.center and card.config.center.key
+    if card_key then
+        local backup_position = Utils.cached_consumable_positions[card_key .. "_" .. tostring(card)]
+        if backup_position then
+            return backup_position
+        end
+    end
+    
+    return nil
+end
+
+function Utils.get_cached_shop_card_position(card)
+    if not card then return nil end
+    
+    -- Direct lookup by card reference
+    local position = Utils.cached_shop_card_positions[card]
+    if position then
+        return position
+    end
+    
+    -- Backup lookup by key + card reference
+    local card_key = card.config and card.config.center and card.config.center.key
+    if card_key then
+        local backup_position = Utils.cached_shop_card_positions[card_key .. "_" .. tostring(card)]
+        if backup_position then
+            return backup_position
+        end
+    end
+    
+    return nil
+end
+
+function Utils.get_cached_booster_position(card)
+    if not card then return nil end
+    
+    -- Direct lookup by card reference
+    local position = Utils.cached_booster_positions[card]
+    if position then
+        return position
+    end
+    
+    -- Backup lookup by key + card reference
+    local card_key = card.config and card.config.center and card.config.center.key
+    if card_key then
+        local backup_position = Utils.cached_booster_positions[card_key .. "_" .. tostring(card)]
+        if backup_position then
+            return backup_position
+        end
+    end
+    
+    return nil
+end
+
+function Utils.clear_pack_positions()
+    Utils.cached_pack_positions = {}
+    sendDebugMessage("Cleared pack position cache")
+end
+
+function Utils.clear_consumable_positions()
+    Utils.cached_consumable_positions = {}
+    sendDebugMessage("Cleared consumable position cache")
+end
+
+function Utils.clear_shop_card_positions()
+    Utils.cached_shop_card_positions = {}
+    sendDebugMessage("Cleared consumable position cache")
+end
+
+function Utils.clear_booster_positions()
+    Utils.cached_booster_positions = {}
+    sendDebugMessage("Cleared consumable position cache")
 end
 
 function Utils.getDeckData()
@@ -289,11 +472,11 @@ function Utils.getAnteData()
     return _ante
 end
 
-function Utils.getBackData()
-    local _back = { }
+-- function Utils.getBackData()
+--     local _back = { }
 
-    return _back
-end
+--     return _back
+-- end
 
 function Utils.getShopData()
     local _shop = { }
@@ -310,6 +493,7 @@ function Utils.getShopData()
 
     for i = 1, #G.shop_booster.cards do
         _shop.boosters[i] = Utils.getCardData(G.shop_booster.cards[i])
+
     end
 
     for i = 1, #G.shop_vouchers.cards do
@@ -480,7 +664,7 @@ function Utils.getGamestate()
         end
     end
     
-    _gamestate.deckback = Utils.getBackData()
+    -- _gamestate.deckback = Utils.getBackData()
     _gamestate.deck = Utils.getDeckData()
     _gamestate.hand = Utils.getHandData()
     _gamestate.jokers = Utils.getJokersData()
