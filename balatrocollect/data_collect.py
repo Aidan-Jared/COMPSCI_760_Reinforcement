@@ -85,7 +85,7 @@ class BalatroDataCollector:
             print(f"Saved session data to {filepath} ({len(self.gamestate_data)} states)")
             
             # Also save as CSV for easy analysis
-            self.save_session_csv(session_info, filepath.replace('.json', '.csv'))
+            # self.save_session_csv(session_info, filepath.replace('.json', '.csv'))
             
         except Exception as e:
             print(f"Error saving session data: {e}")

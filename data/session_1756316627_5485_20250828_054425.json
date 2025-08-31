@@ -1,0 +1,4232 @@
+{
+  "session_id": "1756316627_5485",
+  "collection_start": 1756316627,
+  "collection_end": 1756316651,
+  "total_states": 6,
+  "states": [
+    {
+      "jokers": [
+        {
+          "ability": {
+            "bonus": 0,
+            "h_mult": 0,
+            "hands_played_at_create": 4,
+            "extra": {
+              "size": 3,
+              "mult": 20
+            },
+            "h_size": 0,
+            "x_chips": 1,
+            "perma_h_mult": 0,
+            "mult": 0,
+            "perma_x_mult": 0,
+            "h_chips": 0,
+            "perma_h_dollars": 0,
+            "h_x_chips": 1,
+            "x_mult": 1,
+            "perma_h_chips": 0,
+            "effect": "Hand Size Mult",
+            "perma_mult": 0,
+            "perma_h_x_mult": 0,
+            "t_mult": 0,
+            "h_dollars": 0,
+            "set": "Joker",
+            "order": 16,
+            "perma_x_chips": 0,
+            "perma_p_dollars": 0,
+            "extra_value": 0,
+            "perma_h_x_chips": 0,
+            "perma_bonus": 0,
+            "p_dollars": 0,
+            "h_x_mult": 0,
+            "type": "",
+            "t_chips": 0,
+            "name": "Half Joker",
+            "d_size": 0
+          },
+          "x_mult": 0,
+          "label": "Half Joker",
+          "chips": 0,
+          "x_h_mult": 0,
+          "mult": 0
+        },
+        {
+          "ability": {
+            "bonus": 0,
+            "h_mult": 0,
+            "hands_played_at_create": 7,
+            "extra": 4,
+            "h_size": 0,
+            "x_chips": 1,
+            "perma_h_mult": 0,
+            "mult": 0,
+            "perma_x_mult": 0,
+            "h_chips": 0,
+            "perma_h_dollars": 0,
+            "h_x_chips": 1,
+            "x_mult": 1,
+            "perma_h_chips": 0,
+            "effect": "",
+            "perma_mult": 0,
+            "perma_h_x_mult": 0,
+            "t_mult": 0,
+            "h_dollars": 0,
+            "set": "Joker",
+            "order": 144,
+            "perma_x_chips": 0,
+            "perma_p_dollars": 0,
+            "extra_value": 0,
+            "perma_h_x_chips": 0,
+            "perma_bonus": 0,
+            "p_dollars": 0,
+            "h_x_mult": 0,
+            "type": "",
+            "t_chips": 0,
+            "name": "Burnt Joker",
+            "d_size": 0
+          },
+          "x_mult": 0,
+          "label": "Burnt Joker",
+          "chips": 0,
+          "x_h_mult": 0,
+          "mult": 0
+        },
+        {
+          "ability": {
+            "bonus": 0,
+            "x_mult": 1,
+            "hands_played_at_create": 10,
+            "h_size": 0,
+            "x_chips": 1,
+            "perma_h_mult": 0,
+            "mult": 0,
+            "perma_x_mult": 0,
+            "h_chips": 0,
+            "perma_h_dollars": 0,
+            "h_x_chips": 1,
+            "h_mult": 0,
+            "perma_h_x_mult": 0,
+            "effect": "Type Mult",
+            "perma_mult": 0,
+            "t_mult": 8,
+            "perma_h_chips": 0,
+            "h_dollars": 0,
+            "set": "Joker",
+            "order": 6,
+            "perma_x_chips": 0,
+            "perma_p_dollars": 0,
+            "extra_value": 0,
+            "perma_h_x_chips": 0,
+            "perma_bonus": 0,
+            "p_dollars": 0,
+            "h_x_mult": 0,
+            "type": "Pair",
+            "t_chips": 0,
+            "name": "Jolly Joker",
+            "d_size": 0
+          },
+          "x_mult": 0,
+          "label": "Jolly Joker",
+          "chips": 0,
+          "x_h_mult": 0,
+          "mult": 0
+        },
+        {
+          "ability": {
+            "bonus": 0,
+            "x_mult": 1,
+            "hands_played_at_create": 12,
+            "h_size": 0,
+            "x_chips": 1,
+            "perma_h_mult": 0,
+            "mult": 0,
+            "perma_x_mult": 0,
+            "h_chips": 0,
+            "perma_h_dollars": 0,
+            "h_x_chips": 1,
+            "h_mult": 0,
+            "perma_h_x_mult": 0,
+            "effect": "Tarot Buff",
+            "perma_mult": 0,
+            "t_mult": 0,
+            "perma_h_chips": 0,
+            "h_dollars": 0,
+            "set": "Joker",
+            "order": 142,
+            "perma_x_chips": 0,
+            "perma_p_dollars": 0,
+            "extra_value": 0,
+            "perma_h_x_chips": 0,
+            "perma_bonus": 0,
+            "p_dollars": 0,
+            "h_x_mult": 0,
+            "type": "",
+            "t_chips": 0,
+            "name": "Cartomancer",
+            "d_size": 0
+          },
+          "x_mult": 0,
+          "label": "Cartomancer",
+          "chips": 0,
+          "x_h_mult": 0,
+          "mult": 0
+        },
+        {
+          "ability": {
+            "bonus": 0,
+            "h_mult": 0,
+            "hands_played_at_create": 27,
+            "extra": 0.1,
+            "Xmult": 1,
+            "x_chips": 1,
+            "perma_h_mult": 0,
+            "mult": 0,
+            "h_size": 0,
+            "perma_x_mult": 0,
+            "perma_h_dollars": 0,
+            "h_x_chips": 1,
+            "x_mult": 1,
+            "h_chips": 0,
+            "perma_h_x_mult": 0,
+            "perma_mult": 0,
+            "t_mult": 0,
+            "perma_h_chips": 0,
+            "h_dollars": 0,
+            "set": "Joker",
+            "order": 55,
+            "perma_x_chips": 0,
+            "perma_p_dollars": 0,
+            "extra_value": 0,
+            "perma_h_x_chips": 0,
+            "perma_bonus": 0,
+            "p_dollars": 0,
+            "h_x_mult": 0,
+            "type": "",
+            "t_chips": 0,
+            "name": "Constellation",
+            "d_size": 0
+          },
+          "x_mult": 0,
+          "label": "Constellation",
+          "chips": 0,
+          "x_h_mult": 0,
+          "mult": 0
+        }
+      ],
+      "hand_levels": {
+        "Flush House": {
+          "level": 2,
+          "played": 0,
+          "visible": false,
+          "chips": 180,
+          "mult": 18
+        },
+        "Full House": {
+          "level": 3,
+          "played": 0,
+          "visible": true,
+          "chips": 90,
+          "mult": 8
+        },
+        "Flush": {
+          "level": 3,
+          "played": 0,
+          "visible": true,
+          "chips": 65,
+          "mult": 8
+        },
+        "Pair": {
+          "level": 10,
+          "played": 14,
+          "visible": true,
+          "chips": 145,
+          "mult": 11
+        },
+        "Four of a Kind": {
+          "level": 2,
+          "played": 0,
+          "visible": true,
+          "chips": 90,
+          "mult": 10
+        },
+        "Straight Flush": {
+          "level": 2,
+          "played": 0,
+          "visible": true,
+          "chips": 140,
+          "mult": 12
+        },
+        "Straight": {
+          "level": 5,
+          "played": 4,
+          "visible": true,
+          "chips": 150,
+          "mult": 16
+        },
+        "Three of a Kind": {
+          "level": 7,
+          "played": 8,
+          "visible": true,
+          "chips": 150,
+          "mult": 15
+        },
+        "Flush Five": {
+          "level": 2,
+          "played": 0,
+          "visible": false,
+          "chips": 210,
+          "mult": 19
+        },
+        "Two Pair": {
+          "level": 2,
+          "played": 2,
+          "visible": true,
+          "chips": 40,
+          "mult": 3
+        },
+        "Five of a Kind": {
+          "level": 2,
+          "played": 0,
+          "visible": false,
+          "chips": 155,
+          "mult": 15
+        },
+        "High Card": {
+          "level": 5,
+          "played": 0,
+          "visible": true,
+          "chips": 45,
+          "mult": 5
+        }
+      },
+      "deck": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_4",
+          "mult": 0,
+          "label": "Gold Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_A",
+          "mult": 0,
+          "label": "Lucky Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_K",
+          "mult": 0,
+          "label": "Lucky Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Diamonds",
+          "suit": "Diamonds"
+        }
+      ],
+      "num_hands_played": 28,
+      "timestamp": 1756316627,
+      "round": 14,
+      "consumables": [],
+      "discount_percent": 0,
+      "bankrupt_at": 0,
+      "tags": [],
+      "state_name": "GAME_OVER",
+      "max_jokers": 5,
+      "gamestate_id": "1756316627_5485_GS132_1756316627",
+      "current_round": {
+        "discards_left": 2
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 0,
+      "dollars": 37,
+      "hand": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Spades",
+          "suit": "Spades"
+        }
+      ],
+      "inflation": 0,
+      "chips": 7740,
+      "shop": [],
+      "handscores": {
+        "goal": 11000,
+        "score": 7740
+      },
+      "ante": {
+        "blinds": {
+          "current": {
+            "chips": 11000,
+            "name": "The Needle",
+            "mult": 1
+          },
+          "ondeck": "Boss"
+        }
+      },
+      "state": 4,
+      "current_state": 4,
+      "interest_cap": 25,
+      "pack": [],
+      "received_timestamp": 1756316627.8501194,
+      "type": "game_state"
+    },
+    {
+      "jokers": [],
+      "hand_levels": {
+        "Flush House": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 140,
+          "mult": 14
+        },
+        "Full House": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 40,
+          "mult": 4
+        },
+        "Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 35,
+          "mult": 4
+        },
+        "Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 10,
+          "mult": 2
+        },
+        "Four of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 60,
+          "mult": 7
+        },
+        "Straight Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 100,
+          "mult": 8
+        },
+        "Straight": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 4
+        },
+        "Three of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 3
+        },
+        "Flush Five": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 160,
+          "mult": 16
+        },
+        "Two Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 20,
+          "mult": 2
+        },
+        "Five of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 120,
+          "mult": 12
+        },
+        "High Card": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 5,
+          "mult": 1
+        }
+      },
+      "deck": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Clubs",
+          "suit": "Clubs"
+        }
+      ],
+      "num_hands_played": 0,
+      "timestamp": 1756316631,
+      "round": 0,
+      "consumables": [],
+      "discount_percent": 0,
+      "bankrupt_at": 0,
+      "tags": [],
+      "state_name": "BLIND_SELECT",
+      "max_jokers": 0,
+      "gamestate_id": "1756316627_5485_GS133_1756316631",
+      "current_round": {
+        "discards_left": 4
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 4,
+      "dollars": 4,
+      "hand": [],
+      "inflation": 0,
+      "chips": 0,
+      "shop": [],
+      "handscores": {
+        "goal": 0,
+        "score": 0
+      },
+      "ante": {
+        "blinds": {
+          "current": {
+            "chips": 0,
+            "name": "",
+            "mult": 0
+          },
+          "ondeck": "Small"
+        }
+      },
+      "state": 7,
+      "current_state": 7,
+      "interest_cap": 25,
+      "pack": [],
+      "received_timestamp": 1756316631.6215522,
+      "type": "game_state"
+    },
+    {
+      "jokers": [],
+      "hand_levels": {
+        "Flush House": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 140,
+          "mult": 14
+        },
+        "Full House": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 40,
+          "mult": 4
+        },
+        "Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 35,
+          "mult": 4
+        },
+        "Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 10,
+          "mult": 2
+        },
+        "Four of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 60,
+          "mult": 7
+        },
+        "Straight Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 100,
+          "mult": 8
+        },
+        "Straight": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 4
+        },
+        "Three of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 3
+        },
+        "Flush Five": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 160,
+          "mult": 16
+        },
+        "Two Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 20,
+          "mult": 2
+        },
+        "Five of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 120,
+          "mult": 12
+        },
+        "High Card": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 5,
+          "mult": 1
+        }
+      },
+      "deck": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Clubs",
+          "suit": "Clubs"
+        }
+      ],
+      "num_hands_played": 0,
+      "timestamp": 1756316639,
+      "round": 1,
+      "consumables": [],
+      "discount_percent": 0,
+      "bankrupt_at": 0,
+      "tags": [],
+      "state_name": "SELECTING_HAND",
+      "max_jokers": 0,
+      "gamestate_id": "1756316627_5485_GS134_1756316639",
+      "current_round": {
+        "discards_left": 3
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 12,
+      "dollars": 4,
+      "hand": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Diamonds",
+          "suit": "Diamonds"
+        }
+      ],
+      "inflation": 0,
+      "chips": 0,
+      "shop": [],
+      "handscores": {
+        "goal": 300,
+        "score": 0
+      },
+      "ante": {
+        "blinds": {
+          "current": {
+            "chips": 300,
+            "name": "Small Blind",
+            "mult": 1
+          },
+          "ondeck": "Small"
+        }
+      },
+      "state": 1,
+      "current_state": 1,
+      "interest_cap": 25,
+      "pack": [],
+      "received_timestamp": 1756316639.6944902,
+      "type": "game_state"
+    },
+    {
+      "jokers": [],
+      "hand_levels": {
+        "Flush House": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 140,
+          "mult": 14
+        },
+        "Full House": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 40,
+          "mult": 4
+        },
+        "Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 35,
+          "mult": 4
+        },
+        "Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 10,
+          "mult": 2
+        },
+        "Four of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 60,
+          "mult": 7
+        },
+        "Straight Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 100,
+          "mult": 8
+        },
+        "Straight": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 4
+        },
+        "Three of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 3
+        },
+        "Flush Five": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 160,
+          "mult": 16
+        },
+        "Two Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 20,
+          "mult": 2
+        },
+        "Five of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 120,
+          "mult": 12
+        },
+        "High Card": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 5,
+          "mult": 1
+        }
+      },
+      "deck": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Diamonds",
+          "suit": "Diamonds"
+        }
+      ],
+      "num_hands_played": 0,
+      "timestamp": 1756316644,
+      "round": 1,
+      "consumables": [],
+      "discount_percent": 0,
+      "bankrupt_at": 0,
+      "tags": [],
+      "state_name": "SELECTING_HAND",
+      "max_jokers": 0,
+      "gamestate_id": "1756316627_5485_GS135_1756316644",
+      "current_round": {
+        "discards_left": 2
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 17,
+      "dollars": 4,
+      "hand": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Diamonds",
+          "suit": "Diamonds"
+        }
+      ],
+      "inflation": 0,
+      "chips": 0,
+      "shop": [],
+      "handscores": {
+        "goal": 300,
+        "score": 0
+      },
+      "ante": {
+        "blinds": {
+          "current": {
+            "chips": 300,
+            "name": "Small Blind",
+            "mult": 1
+          },
+          "ondeck": "Small"
+        }
+      },
+      "state": 1,
+      "current_state": 1,
+      "interest_cap": 25,
+      "pack": [],
+      "received_timestamp": 1756316644.5724304,
+      "type": "game_state"
+    },
+    {
+      "jokers": [],
+      "hand_levels": {
+        "Flush House": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 140,
+          "mult": 14
+        },
+        "Full House": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 40,
+          "mult": 4
+        },
+        "Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 35,
+          "mult": 4
+        },
+        "Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 10,
+          "mult": 2
+        },
+        "Four of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 60,
+          "mult": 7
+        },
+        "Straight Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 100,
+          "mult": 8
+        },
+        "Straight": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 4
+        },
+        "Three of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 3
+        },
+        "Flush Five": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 160,
+          "mult": 16
+        },
+        "Two Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 20,
+          "mult": 2
+        },
+        "Five of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 120,
+          "mult": 12
+        },
+        "High Card": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 5,
+          "mult": 1
+        }
+      },
+      "deck": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Clubs",
+          "suit": "Clubs"
+        }
+      ],
+      "num_hands_played": 0,
+      "timestamp": 1756316647,
+      "round": 1,
+      "consumables": [],
+      "discount_percent": 0,
+      "bankrupt_at": 0,
+      "tags": [],
+      "state_name": "SELECTING_HAND",
+      "max_jokers": 0,
+      "gamestate_id": "1756316627_5485_GS136_1756316647",
+      "current_round": {
+        "discards_left": 1
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 20,
+      "dollars": 4,
+      "hand": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Hearts",
+          "suit": "Hearts"
+        }
+      ],
+      "inflation": 0,
+      "chips": 0,
+      "shop": [],
+      "handscores": {
+        "goal": 300,
+        "score": 0
+      },
+      "ante": {
+        "blinds": {
+          "current": {
+            "chips": 300,
+            "name": "Small Blind",
+            "mult": 1
+          },
+          "ondeck": "Small"
+        }
+      },
+      "state": 1,
+      "current_state": 1,
+      "interest_cap": 25,
+      "pack": [],
+      "received_timestamp": 1756316647.4888139,
+      "type": "game_state"
+    },
+    {
+      "jokers": [],
+      "hand_levels": {
+        "Flush House": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 140,
+          "mult": 14
+        },
+        "Full House": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 40,
+          "mult": 4
+        },
+        "Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 35,
+          "mult": 4
+        },
+        "Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 10,
+          "mult": 2
+        },
+        "Four of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 60,
+          "mult": 7
+        },
+        "Straight Flush": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 100,
+          "mult": 8
+        },
+        "Straight": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 4
+        },
+        "Three of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 30,
+          "mult": 3
+        },
+        "Flush Five": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 160,
+          "mult": 16
+        },
+        "Two Pair": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 20,
+          "mult": 2
+        },
+        "Five of a Kind": {
+          "level": 1,
+          "played": 0,
+          "visible": false,
+          "chips": 120,
+          "mult": 12
+        },
+        "High Card": {
+          "level": 1,
+          "played": 0,
+          "visible": true,
+          "chips": 5,
+          "mult": 1
+        }
+      },
+      "deck": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_8",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "8",
+          "chips": 8,
+          "name": "8 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_K",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "King",
+          "chips": 10,
+          "name": "King of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Spades",
+          "suit": "Spades"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_5",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "5",
+          "chips": 5,
+          "name": "5 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_J",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Jack",
+          "chips": 10,
+          "name": "Jack of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_2",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "2",
+          "chips": 2,
+          "name": "2 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_Q",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Queen",
+          "chips": 10,
+          "name": "Queen of Spades",
+          "suit": "Spades"
+        }
+      ],
+      "num_hands_played": 0,
+      "timestamp": 1756316651,
+      "round": 1,
+      "consumables": [],
+      "discount_percent": 0,
+      "bankrupt_at": 0,
+      "tags": [],
+      "state_name": "SELECTING_HAND",
+      "max_jokers": 0,
+      "gamestate_id": "1756316627_5485_GS137_1756316651",
+      "current_round": {
+        "discards_left": 0
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 24,
+      "dollars": 4,
+      "hand": [
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_A",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "Ace",
+          "chips": 11,
+          "name": "Ace of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_T",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "10",
+          "chips": 10,
+          "name": "10 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "C_9",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "9",
+          "chips": 9,
+          "name": "9 of Clubs",
+          "suit": "Clubs"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_7",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "7",
+          "chips": 7,
+          "name": "7 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "D_6",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "6",
+          "chips": 6,
+          "name": "6 of Diamonds",
+          "suit": "Diamonds"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "H_4",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "4",
+          "chips": 4,
+          "name": "4 of Hearts",
+          "suit": "Hearts"
+        },
+        {
+          "x_mult": 0,
+          "x_h_mult": 0,
+          "card_key": "S_3",
+          "mult": 0,
+          "label": "Base Card",
+          "value": "3",
+          "chips": 3,
+          "name": "3 of Spades",
+          "suit": "Spades"
+        }
+      ],
+      "inflation": 0,
+      "chips": 0,
+      "shop": [],
+      "handscores": {
+        "goal": 300,
+        "score": 0
+      },
+      "ante": {
+        "blinds": {
+          "current": {
+            "chips": 300,
+            "name": "Small Blind",
+            "mult": 1
+          },
+          "ondeck": "Small"
+        }
+      },
+      "state": 1,
+      "current_state": 1,
+      "interest_cap": 25,
+      "pack": [],
+      "received_timestamp": 1756316651.239021,
+      "type": "game_state"
+    }
+  ],
+  "actions": [
+    {
+      "timestamp": 1756316631,
+      "gamestate_id": "1756316627_5485_GS132_1756316627",
+      "card_info": [],
+      "session_id": "1756316627_5485",
+      "game_time": 4,
+      "action": "SELECT_BLIND",
+      "game_state": "BLIND_SELECT",
+      "params": [],
+      "type": "player_action",
+      "received_timestamp": 1756316631.6184142
+    },
+    {
+      "timestamp": 1756316639,
+      "gamestate_id": "1756316627_5485_GS133_1756316631",
+      "card_info": {
+        "discarded_cards": [
+          {
+            "suit": "Diamonds",
+            "position": 3,
+            "enhancement": "c_base",
+            "rank": "9"
+          },
+          {
+            "suit": "Clubs",
+            "position": 4,
+            "enhancement": "c_base",
+            "rank": "8"
+          },
+          {
+            "suit": "Diamonds",
+            "position": 6,
+            "enhancement": "c_base",
+            "rank": "5"
+          }
+        ],
+        "game_state": {
+          "hands_left": 4,
+          "discards_left": 4,
+          "chips": 0,
+          "dollars": 4
+        }
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 12,
+      "action": "DISCARD_HAND",
+      "game_state": "DRAW_TO_HAND",
+      "params": [
+        3,
+        4,
+        6
+      ],
+      "type": "player_action",
+      "received_timestamp": 1756316639.1009855
+    },
+    {
+      "timestamp": 1756316644,
+      "gamestate_id": "1756316627_5485_GS134_1756316639",
+      "card_info": {
+        "discarded_cards": [
+          {
+            "suit": "Spades",
+            "position": 4,
+            "enhancement": "c_base",
+            "rank": "6"
+          },
+          {
+            "suit": "Spades",
+            "position": 6,
+            "enhancement": "c_base",
+            "rank": "5"
+          }
+        ],
+        "game_state": {
+          "hands_left": 4,
+          "discards_left": 3,
+          "chips": 0,
+          "dollars": 4
+        }
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 17,
+      "action": "DISCARD_HAND",
+      "game_state": "DRAW_TO_HAND",
+      "params": [
+        4,
+        6
+      ],
+      "type": "player_action",
+      "received_timestamp": 1756316644.0619652
+    },
+    {
+      "timestamp": 1756316646,
+      "gamestate_id": "1756316627_5485_GS135_1756316644",
+      "card_info": {
+        "discarded_cards": [
+          {
+            "suit": "Diamonds",
+            "position": 7,
+            "enhancement": "c_base",
+            "rank": "4"
+          },
+          {
+            "suit": "Diamonds",
+            "position": 8,
+            "enhancement": "c_base",
+            "rank": "2"
+          }
+        ],
+        "game_state": {
+          "hands_left": 4,
+          "discards_left": 2,
+          "chips": 0,
+          "dollars": 4
+        }
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 19,
+      "action": "DISCARD_HAND",
+      "game_state": "DRAW_TO_HAND",
+      "params": [
+        7,
+        8
+      ],
+      "type": "player_action",
+      "received_timestamp": 1756316646.974724
+    },
+    {
+      "timestamp": 1756316650,
+      "gamestate_id": "1756316627_5485_GS136_1756316647",
+      "card_info": {
+        "discarded_cards": [
+          {
+            "suit": "Spades",
+            "position": 1,
+            "enhancement": "c_base",
+            "rank": "Ace"
+          },
+          {
+            "suit": "Clubs",
+            "position": 2,
+            "enhancement": "c_base",
+            "rank": "King"
+          },
+          {
+            "suit": "Diamonds",
+            "position": 3,
+            "enhancement": "c_base",
+            "rank": "King"
+          },
+          {
+            "suit": "Diamonds",
+            "position": 4,
+            "enhancement": "c_base",
+            "rank": "Queen"
+          }
+        ],
+        "game_state": {
+          "hands_left": 4,
+          "discards_left": 1,
+          "chips": 0,
+          "dollars": 4
+        }
+      },
+      "session_id": "1756316627_5485",
+      "game_time": 23,
+      "action": "DISCARD_HAND",
+      "game_state": "DRAW_TO_HAND",
+      "params": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "type": "player_action",
+      "received_timestamp": 1756316650.5334291
+    }
+  ]
+}
