@@ -54,8 +54,8 @@ class DQNAgent:
         self.memory_p = deque(maxlen=2000)
         self.gamma = 1. # discount rate
         self.epsilon = 1. #exploration rate
-        self.epsilon_min = .5
-        self.epsilon_decay = .995
+        self.epsilon_min = .1
+        self.epsilon_decay = .9999
         self.learning_rate = .1
         self.model = CNN().to(device)
         self.reward_number = reward_number
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     truncated = False
     batch_size = 32
 
-    Episodes = 5
+    Episodes = 20
     for e in range(Episodes):
         state, info = env.reset()
         plt.ion()  # Turn on interactive mode
