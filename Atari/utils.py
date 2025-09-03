@@ -212,7 +212,7 @@ class VectorEnvVisualizer:
     #     self.episode_count += 1
 
 def atari_wraper(env):
-    # env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1)
+    env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1)
     env = ReturnWrapper(env)
     env = TransformReward(env, lambda r: np.sign(r))
     return env
