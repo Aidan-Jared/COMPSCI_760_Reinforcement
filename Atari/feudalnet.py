@@ -15,12 +15,13 @@ class FeudalNetwork(nn.Module):
         self.r = dilation
         self.n_actions = n_actions
         self.device = device
+        self.decay = args.decay
 
         self.preprocessor = Preprocessor(input_dim, device, mlp)
 
         self.perception = Perception(input_dim, self.d, mlp)
         self.manager = Manager(self.c, self.d, self.r, args, device)
-        self.worker = Worker(self.b, self.c, self.d, self.k, n_actions, device)
+        self.worker = Worker(self.b, self.c, self.d, self.k, n_actions, device, args)
 
 
         self.hidden_m = self._init_hidden(args.num_workers, self.r * self.d, grad=True)
@@ -75,8 +76,10 @@ class FeudalNetwork(nn.Module):
         states = [torch.zeros_like(template).to(self.device) for _ in range(2*self.c+1)]
         masks = [torch.ones(self.b, 1).to(self.device) for _ in range(2*self.c+1)]
         return goals, states, masks
-
-
+    
+    def eps_decay(self):
+        self.manager.eps *= self.decay
+        self.worker.eps *= self.decay
 
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp = False):
@@ -142,13 +145,14 @@ class Manager(nn.Module):
         return cos_d
     
 class Worker(nn.Module):
-    def __init__(self, b, c, d, k, num_actions, device):
+    def __init__(self, b, c, d, k, num_actions, device, args):
         super().__init__()
         self.b = b
         self.c = c
         self.k = k
         self.num_actions = num_actions
         self.device = device
+        self.eps = args.eps
 
         self.Wrnn = nn.LSTMCell(d, k * self.num_actions)
         self.phi = nn.Linear(d, k, bias=False)
@@ -170,6 +174,8 @@ class Worker(nn.Module):
 
         u = u.reshape(u.shape[0], self.k, self.num_actions)
         a = F.softmax(torch.einsum("bk, bka -> ba", w, u), dim=-1)
+        if (self.eps > torch.rand(1)[0]):
+            a = F.softmax(torch.randn_like(a, requires_grad=False))
         return a, hidden, value_est
     
     def intrinsic_reward(self, states, goals, masks):
@@ -194,7 +200,7 @@ class Preprocessor:
         self.rms = RunningMeanStd(shape = (1,) + self.shape)
 
     def __call__(self, x):
-        x = x['screen']
+        x = x
         x = np.asarray(x).reshape(x.shape[0], *self.shape)
         self.rms.update(x)
         x = x - self.rms.mean

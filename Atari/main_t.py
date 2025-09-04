@@ -11,11 +11,11 @@ parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
 parser.add_argument('--lr', type=float, default=0.0005,
                     help='learning rate')
-parser.add_argument('--env-name', type=str, default='ALE/Seaquest-v5',
+parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
 parser.add_argument('--num-workers', type=int, default=16,
                     help='number of parallel environments to run')
-parser.add_argument('--num-steps', type=int, default=400,
+parser.add_argument('--num-steps', type=int, default=100,
                     help='number of steps the agent takes before updating')
 parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
@@ -25,11 +25,11 @@ parser.add_argument('--grad-clip', type=float, default=5.,
                     help='Gradient clipping (recommended).')
 parser.add_argument('--entropy-coef', type=float, default=0.01,
                     help='Entropy coefficient to encourage exploration.')
-parser.add_argument('--mlp', type=int, default=0,
+parser.add_argument('--mlp', type=int, default=1,
                     help='toggle to feedforward ML architecture')
 
 # SPECIFIC FEUDALNET PARAMETERS
-parser.add_argument('--time-horizon', type=int, default=10,
+parser.add_argument('--time-horizon', type=int, default=30,
                     help='Manager horizon (c)')
 parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
@@ -37,13 +37,17 @@ parser.add_argument('--hidden-dim-worker', type=int, default=16,
                     help='Hidden dim for worker (k)')
 parser.add_argument('--gamma-w', type=float, default=0.99,
                     help="discount factor worker")
-parser.add_argument('--gamma-m', type=float, default=0.999,
+parser.add_argument('--gamma-m', type=float, default=0.9999,
                     help="discount factor manager")
 parser.add_argument('--alpha', type=float, default=0.5,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=int(1e-5),
+parser.add_argument('--eps', type=float, default=.999,
                     help='Random Gausian goal for exploration')
-parser.add_argument('--dilation', type=int, default=10,
+parser.add_argument('--decay', type=float, default=.95,
+                    help='how much eps decays')
+parser.add_argument('--decay-limit', type=float, default=1e-4,
+                    help='how much eps decays')
+parser.add_argument('--dilation', type=int, default=40,
                     help='Dilation parameter for manager LSTM.')
 
 # EXPERIMENT RELATED PARAMS
@@ -65,7 +69,7 @@ def experiment(args):
         torch.backends.cudnn.benchmark = False
     
     envs = make_envs(args.env_name, args.num_workers, args.seed)
-    feudalnet = FeudalNetwork(
+    feudalnet = FeudalTransformer(
         num_workers=args.num_workers,
         input_dim=envs.single_observation_space.shape,
         hidden_dim_manager=args.hidden_dim_manager,
@@ -78,27 +82,31 @@ def experiment(args):
         args=args)
     
     optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
-    goals, states, masks = feudalnet.init_obj()
+    goals, states, masks, actions, rewards, zs = feudalnet.init_obj()
 
-    x, info = envs.reset()
+    x, info = envs.reset(seed=args.seed)
     step = 0
     visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
     while step < args.max_steps:
         feudalnet.repackage_hidden()
-        goals = [g.detach() for g in goals]
+        goals, states, zs, actions, rewards = feudalnet.detach_sequences(goals, states, zs, actions, rewards)
         storage = Storage(size=args.num_steps,
                           keys=['r', 'r_i', 'v_w', 'v_m', 'logp', 'entropy',
                                 's_goal_cos', 'mask', 'ret_w', 'ret_m',
                                 'adv_m', 'adv_w'])
 
         for _ in range(args.num_steps):
-            action_dist, goals, states, value_m, value_w = feudalnet(x, goals, states, masks[-1])
+            action_dist, goals, states, zs, value_m, value_w = feudalnet(x, zs, actions, rewards, goals, states, masks)
             action, logp, entropy = take_action(action_dist)
             x, reward, terminated, truncated, info = envs.step(action)
+            actions.pop(0)
+            rewards.pop(0)
+            actions.append(torch.FloatTensor(action).unsqueeze(1).to(device))
+            rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(device))
             if step % 160 == 0:
-                visualizer.capture_frame(envs, step, action, reward, terminated, truncated)
+                visualizer.capture_frame(envs, step, action, reward, terminated, truncated, info)
             # logger.log_episode(info, step)
-            mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(args.device) # apply to transformer
+            mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(args.device)
             masks.pop(0)
             masks.append(mask)
 
@@ -115,8 +123,11 @@ def experiment(args):
 
             step += args.num_workers
 
+            if step % 640 == 0 and feudalnet.manager.eps > args.decay_limit:
+                feudalnet.eps_decay()
+
         with torch.no_grad():
-            *_, next_v_m, next_v_w = feudalnet(x, goals, states, mask, save = False)
+            *_, next_v_m, next_v_w = feudalnet(x, zs, actions, rewards, goals, states, masks, save = False)
             next_v_m = next_v_m.detach()
             next_v_w = next_v_w.detach()
         

@@ -97,11 +97,25 @@ class ReturnWrapper(gym.Wrapper):
         super().__init__(env)
         self.total_rewards = 0
         self.steps = 0
+        self.death_penalty = 50
+        self.current_lives = None
+        self.time_reward = 0
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+
+        if self.current_lives is not None and self.current_lives > info['lives']:
+            reward -= self.death_penalty * info['episode_frame_number'] / 10000
+        else:
+            reward += self.time_reward
+            if info['episode_frame_number'] < 2000 and reward < 11:
+                reward *= info['episode_frame_number'] / 100
+            elif info['episode_frame_number'] > 2000 and reward < 11:
+                reward *= 2
         self.total_rewards += reward
         self.steps += 1
+        self.current_lives = info['lives']
+        info['total_rewards'] = self.total_rewards
         if terminated or truncated:
             info['returns/episodic_reward'] = self.total_rewards
             info['returns/episodic_length'] = self.steps
@@ -119,17 +133,20 @@ class VectorEnvVisualizer:
         self.save_dir = save_dir
         self.frames = []
         self.episode_count = 0
+        self.best_reward = 0
+        self.best_rewards_x = []
+        self.best_reward_y = []
         
         if save_videos:
             os.makedirs(save_dir, exist_ok=True)
         
         # Setup real-time display
         plt.ion()
-        self.fig, (self.ax1, self.ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        self.fig, (self.ax1, self.ax2, self.ax3, self.ax4) = plt.subplots(1, 4, figsize=(15, 6))
         self.im1 = None
         self.im2 = None
         
-    def capture_frame(self, envs, step, actions, rewards, terminated, truncated):
+    def capture_frame(self, envs, step, actions, rewards, terminated, truncated,  info):
         """Capture frame from vector environment"""
         try:
             # Get frames from all environments
@@ -161,7 +178,7 @@ class VectorEnvVisualizer:
             self.ax1.set_title(f'Env {self.env_idx} | Step: {step} | Action: {action} | Reward: {reward:.2f} | Done: {done}')
             
             # Show action distribution visualization (if you want)
-            self.visualize_action_dist(actions, rewards)
+            self.visualize_action_dist(actions, rewards, info, step)
             
             plt.pause(0.01)
             
@@ -172,11 +189,16 @@ class VectorEnvVisualizer:
         except Exception as e:
             print(f"Visualization error: {e}")
     
-    def visualize_action_dist(self, actions, rewards):
+    def visualize_action_dist(self, actions, rewards, info, step):
         """Show action distribution across all environments"""
         if hasattr(actions, '__len__'):
             # Bar chart of actions taken across all environments
             unique_actions, counts = np.unique(actions, return_counts=True)
+
+            if max(info['total_rewards']) > self.best_reward:
+                self.best_reward = max(info['total_rewards'])
+                self.best_reward_y.append(self.best_reward)
+                self.best_rewards_x.append(step)
             
             self.ax2.clear()
             self.ax2.bar(unique_actions, counts, alpha=0.7)
@@ -184,6 +206,17 @@ class VectorEnvVisualizer:
             self.ax2.set_xlabel('Action')
             self.ax2.set_ylabel('Count')
             
+            self.ax3.clear()
+            self.ax3.bar(list(range(len(rewards))),info['total_rewards'], alpha=0.7)
+            self.ax3.set_title('Rewards Across Environments')
+            self.ax3.set_xlabel('total reward')
+            self.ax3.set_ylabel('envorment')
+
+            self.ax4.clear()
+            self.ax4.plot(self.best_rewards_x, self.best_reward_y)
+            self.ax4.set_title('Best reward across time')
+            self.ax4.set_xlabel('step')
+            self.ax4.set_ylabel('best reward')
             # Add reward info
             mean_reward = np.mean(rewards) if hasattr(rewards, '__len__') else rewards
             self.ax2.text(0.7, 0.9, f'Mean Reward: {mean_reward:.3f}', 
@@ -212,13 +245,14 @@ class VectorEnvVisualizer:
     #     self.episode_count += 1
 
 def atari_wraper(env):
-    env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1)
+    # env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1)
     env = ReturnWrapper(env)
-    env = TransformReward(env, lambda r: np.sign(r))
+    # env = TransformReward(env, lambda r: np.sign(r))
     return env
 
 def make_envs(env_name, num_envs, seed = 0):
-    envs = gym.make_vec(env_name, num_envs, wrappers=[atari_wraper], vectorization_mode="sync", render_mode='rgb_array')
+    # 
+    envs = gym.make_vec(env_name, num_envs, wrappers=[atari_wraper], vectorization_mode="sync", render_mode='rgb_array', obs_type="ram")
     envs.reset(seed=seed)
     return envs
 
