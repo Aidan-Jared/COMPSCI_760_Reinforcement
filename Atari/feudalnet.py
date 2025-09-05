@@ -87,6 +87,7 @@ class Perception(nn.Module):
         if mlp:
             self.percept = nn.Sequential(
                 nn.Linear(input_dim[-1], 64),
+                nn.LayerNorm(64),
                 nn.ReLU(),
                 nn.Linear(64, d),
                 nn.ReLU())
@@ -106,6 +107,8 @@ class Perception(nn.Module):
             )
     
     def forward(self, x):
+        if torch.isnan(x).any():
+            print('here')
         return self.percept(x)
 
 class Manager(nn.Module):
@@ -200,30 +203,43 @@ class Preprocessor:
         self.rms = RunningMeanStd(shape = (1,) + self.shape)
 
     def __call__(self, x):
-        x = x
         x = np.asarray(x).reshape(x.shape[0], *self.shape)
         self.rms.update(x)
-        x = x - self.rms.mean
-        return torch.FloatTensor(x).to(self.device)
+        
+        # Check if std is reasonable
+        std = np.sqrt(self.rms.var + 1e-5)
+        if std.mean() < 1e-3:  # Too small, use simple normalization
+            x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+        else:
+            x_normalized = (x - self.rms.mean) / std
+        
+        # CRITICAL: Clip to reasonable range
+        x_normalized = np.clip(x_normalized, -3.0, 3.0)
+        
+        return torch.FloatTensor(x_normalized).to(self.device)
 
 class RunningMeanStd:
     def __init__(self, epsilon = 1e-4, shape=()):
         self.mean = np.zeros(shape, 'float64')
         self.count = epsilon
+        self.var = np.zeros(shape, 'float64')
     
     def update(self, x):
         batch_mean = np.mean(x, axis=0)
         batch_count = x.shape[0]
-        self.update_from_moments(batch_mean, batch_count)
+        batch_var = np.var(x, axis=0)
+        self.update_from_moments(batch_mean, batch_count, batch_var)
 
-    def update_from_moments(self, batch_mean, batch_count):
-        self.mean, self.count = self.update_mean_var_count_from_moments(batch_mean, batch_count)
+    def update_from_moments(self, batch_mean, batch_count, batch_var):
+        self.mean, self.count, self.var = self.update_mean_var_count_from_moments(batch_mean, batch_count, batch_var)
 
-    def update_mean_var_count_from_moments(self, batch_mean, batch_count):
+    def update_mean_var_count_from_moments(self, batch_mean, batch_count, batch_var):
         delta = batch_mean - self.mean
+        var_delta = batch_var - self.var
         tot_count = self.count + batch_count
         new_mean = self.mean + delta * batch_count / tot_count
-        return new_mean, tot_count
+        new_var = self.var + var_delta * batch_count / tot_count
+        return new_mean, tot_count, new_var
     
 def feudal_loss(storage, next_v_m, next_v_w, args):
     # Discount rewards, both of size B x T

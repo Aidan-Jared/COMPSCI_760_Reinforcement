@@ -3,6 +3,7 @@ from gymnasium.wrappers import AtariPreprocessing, TransformReward
 from vizdoom import gymnasium_wrapper
 import ale_py
 gym.register_envs(ale_py)
+from collections import deque, Counter
 
 import torch
 import numpy as np
@@ -86,6 +87,210 @@ class Storage:
     def stack(self, keys):
         data = [getattr(self, k)[:self.size] for k in keys]
         return map(lambda x: torch.stack(x, dim=0), data)
+
+class StagnationPenalty:
+    def __init__(self, stagnation_pen = .0001, position_history_size = 1000, stagnation_threshold = .8, penalty_escalation = 1.2, max_mult = 20):
+        self.stagnation_pen = stagnation_pen
+        self.position_history_size = position_history_size
+        self.stagnation_threshold = stagnation_threshold
+        self.penalty_escalation = penalty_escalation
+        self.max_multi = max_mult
+        
+        self.position_history = deque(maxlen=self.position_history_size)
+        self.counter = 0
+        self.current_multi = 1.0
+
+    def calculate_stagnation_penalty(self, current_position):
+        if current_position is None:
+            return 0.0
+        
+        self.position_history.append(current_position)
+
+        if len(self.position_history) < self.position_history_size // 2:
+            return 0.0
+        
+        unique_positions = len(set(self.position_history))
+        diversity_ratio = unique_positions / len(self.position_history)
+
+
+        penalty = 0
+
+        if diversity_ratio < self.stagnation_threshold:
+            self.counter += 1
+            self.current_multi *= self.penalty_escalation
+
+            penalty = self.stagnation_pen * min(self.max_multi, self.current_multi)
+
+        else:
+            self.counter = max(0, self.counter-5)
+            self.current_multi = max(1, self. current_multi / self.penalty_escalation)
+
+        return penalty
+    
+    def reset_stagnation_tracking(self):
+        self.position_history.clear()
+        self.counter = 0
+        self.current_multi = 1
+
+class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
+    def __init__(self, env, stagnation_penalty=.015, pellet_bonus=.3, death_penalty=500, stagnation_penalty_enable = True):
+        super().__init__(env)
+        if stagnation_penalty_enable:
+            StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=500, stagnation_threshold=.75, penalty_escalation=1.1)
+
+        self.pellet_bonus = pellet_bonus
+        self.death_penalty = death_penalty
+        self.stagnation_penalty_enable = stagnation_penalty_enable
+        self.ram = self._check_ram_observation()
+        self.lives = 0
+
+        self.prev_score = 0
+        self.prev_positon = None
+        self.corridor_history = deque(maxlen=300)
+        self.courner_time_counter = 0
+    
+    def _check_ram_observation(self):
+        if  self.env.spec.kwargs['obs_type'] == 'ram':
+            return True
+        else:
+            return False
+        
+    def reset(self, **kwargs):
+        obs, info = super().reset(**kwargs)
+        self.prev_score = 0
+        self.prev_positon = self._get_position(obs)
+        self.corridor_history.clear()
+        self.lives = info['lives']
+        self.courner_time_counter = 0
+        if self.stagnation_penalty_enable:
+            self.reset_stagnation_tracking()
+        
+        return obs, info
+    
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        current_position = self._get_position(obs)
+        current_score = self._get_score(obs, info)
+
+        modified_reward = reward
+        if current_score > self.prev_score:
+            score_increase = current_score - self.prev_score
+            modified_reward += self.pellet_bonus * score_increase * (info['episode_frame_number'] / 1000)
+
+        stagnation_penalty = 0
+        corner_penalty = 0
+        corridor_penalty = 0
+
+        if self.stagnation_penalty_enable and current_position:
+            stagnation_penalty = self.calculate_stagnation_penalty(current_position)
+            modified_reward -= stagnation_penalty
+
+            if self._is_corner_positon(current_position,  obs):
+                self.courner_time_counter += 1
+                if self.courner_time_counter > 20:
+                    corner_penalty = .02 * (self.courner_time_counter - 20)
+                    modified_reward -= corner_penalty
+            else:
+                self.courner_time_counter = max(0,  self.courner_time_counter - 2)
+            
+            self.corridor_history.append(current_position)
+            if len(self.corridor_history) >= 20:
+                if self._detect_corridor_oscillation():
+                    corridor_penalty = .1
+                    modified_reward -= corridor_penalty
+            if info['lives'] < self.lives:
+                modified_reward -= self.death_penalty * 1/(self.lives)
+                self.lives = info['lives']
+
+        self.prev_score = current_score
+        self.prev_positon = current_position
+
+        info.update({
+            'original_reward': reward,
+            'modified_reward': modified_reward,
+            'position': current_position,
+            'score': current_score,
+            'using_ram': self.ram
+        })
+
+        return obs, modified_reward, terminated, truncated, info
+    
+    def _get_position(self, obs):
+        if self.ram and len(obs) >= 128:
+            try:
+                x = obs[10]
+                y = obs[16]
+                return (x,y)
+            except IndexError:
+                return None
+        else:
+            return self._detect_pacman_position_pixel(obs)
+    
+    def _get_score(self, obs, info):
+        if isinstance(info, dict):
+            if 'score' in info:
+                return info['score']
+            elif hasattr(info, 'episode') and 'r' in info['episode']:
+                return info['episode']['r']
+        
+        if self.ram and len(obs) >= 128:
+            try:
+              return obs[120] * 256 + obs[121]
+            except IndexError:
+                return 0  
+    
+    def _is_corner_positon(self, position, obs):
+        if not position:
+            return False
+        
+        x, y = position
+
+        if self.ram:
+            return (x < 20 or x > 140 or y < 20 or y > 180)
+        else:
+            # For pixel version, check screen boundaries
+            obs_height, obs_width = obs.shape[:2] if len(obs.shape) >= 2 else (210, 160)
+            return (x < obs_width * 0.1 or x > obs_width * 0.9 or 
+                   y < obs_height * 0.1 or y > obs_height * 0.9)
+        
+    def _detect_corridor_oscillation(self):
+        if len(self.corridor_history) < 10:
+            return False
+
+        positions = list(self.corridor_history)[-10:]
+        positions = [p for p in positions if p is not None]
+
+        if len(positions) < 6:
+            return False
+        
+        x_coords = [pos[0] for pos in positions]
+        y_coords = [pos[1] for pos in positions]
+        
+        x_changes = sum(1 for i in range(1, len(x_coords)) if abs(x_coords[i] - x_coords[i-1]) > 5)
+        y_changes = sum(1 for i in range(1, len(y_coords)) if abs(y_coords[i] - y_coords[i-1]) > 5)
+
+        return (x_changes > 6 or y_changes > 6)
+    
+    def _detect_pacman_position_pixel(self, obs):
+        """Detect Ms. Pacman position from pixels"""
+        if len(obs.shape) == 3:  # RGB
+            # Look for yellow Ms. Pacman sprite
+            yellow_mask = (obs[:, :, 0] > 200) & (obs[:, :, 1] > 200) & (obs[:, :, 2] < 100)
+            if np.any(yellow_mask):
+                y_coords, x_coords = np.where(yellow_mask)
+                # Filter for reasonably sized sprites
+                if len(x_coords) > 5 and len(x_coords) < 100:
+                    return (int(np.mean(x_coords)), int(np.mean(y_coords)))
+        elif len(obs.shape) == 2:  # Grayscale
+            # Look for bright sprite
+            bright_mask = obs > 200
+            if np.any(bright_mask):
+                y_coords, x_coords = np.where(bright_mask)
+                if len(x_coords) > 5 and len(x_coords) < 100:
+                    return (int(np.mean(x_coords)), int(np.mean(y_coords)))
+        
+        return None
+
 
 class ReturnWrapper(gym.Wrapper):
     #######################################################################
@@ -195,8 +400,8 @@ class VectorEnvVisualizer:
             # Bar chart of actions taken across all environments
             unique_actions, counts = np.unique(actions, return_counts=True)
 
-            if max(info['total_rewards']) > self.best_reward:
-                self.best_reward = max(info['total_rewards'])
+            if max(info['modified_reward']) > self.best_reward:
+                self.best_reward = max(info['modified_reward'])
                 self.best_reward_y.append(self.best_reward)
                 self.best_rewards_x.append(step)
             
@@ -207,7 +412,7 @@ class VectorEnvVisualizer:
             self.ax2.set_ylabel('Count')
             
             self.ax3.clear()
-            self.ax3.bar(list(range(len(rewards))),info['total_rewards'], alpha=0.7)
+            self.ax3.bar(list(range(len(rewards))),info['modified_reward'], alpha=0.7)
             self.ax3.set_title('Rewards Across Environments')
             self.ax3.set_xlabel('total reward')
             self.ax3.set_ylabel('envorment')
@@ -247,7 +452,7 @@ class VectorEnvVisualizer:
 def atari_wraper(env):
     # env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1)
     env = ReturnWrapper(env)
-    # env = TransformReward(env, lambda r: np.sign(r))
+    env = PacmanRewardWrapper(env)
     return env
 
 def make_envs(env_name, num_envs, seed = 0):

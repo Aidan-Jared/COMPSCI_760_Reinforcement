@@ -42,7 +42,10 @@ class FeudalTransformer(nn.Module):
 
     def forward(self, x, zs, actions, rewards, goals, states, mask, save=True):
         x = self.preprocessor(x)
+        # x = torch.FloatTensor(x).to(self.device)
         z = self.perception(x)
+        if torch.isnan(z).any():
+            print('here')
         if len(zs) >= (2 * self.c + 1):
             zs.pop(0)
         zs.append(z)
@@ -59,6 +62,7 @@ class FeudalTransformer(nn.Module):
         action_dist, hidden_w, value_w = self.worker(z,  goals[:self.c + 1], self.hidden_w, mask[-1])
         if save:
             self.hidden_w = (hidden_w[0].detach(),hidden_w[1].detach())
+
         return action_dist, goals, states, zs, value_m, value_w
     
     def intrinsic_reward(self, states, goals, masks):
@@ -132,7 +136,7 @@ class ManagerTransformer(nn.Module):
         goal_hat = self.fc(goal_hat)
         
         state = state.detach()
-        goal = F.normalize(goal_hat)
+        goal = F.normalize(goal_hat, dim=-1, eps=1e-6)
         if (self.eps > torch.rand(1)[0]):
             goal = torch.randn_like(goal, requires_grad=False)
         return goal, state, value_est
