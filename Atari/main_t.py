@@ -9,11 +9,11 @@ from tetris_gymnasium.envs.tetris import Tetris
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=1e-5,
+parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=16,
+parser.add_argument('--num-workers', type=int, default=8,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=100,
                     help='number of steps the agent takes before updating')
@@ -29,7 +29,7 @@ parser.add_argument('--mlp', type=int, default=1,
                     help='toggle to feedforward ML architecture')
 
 # SPECIFIC FEUDALNET PARAMETERS
-parser.add_argument('--time-horizon', type=int, default=30,
+parser.add_argument('--time-horizon', type=int, default=40,
                     help='Manager horizon (c)')
 parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
@@ -41,14 +41,14 @@ parser.add_argument('--gamma-m', type=float, default=0.999,
                     help="discount factor manager")
 parser.add_argument('--alpha', type=float, default=0.5,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=.99,
+parser.add_argument('--eps', type=float, default=.5,
                     help='Random Gausian goal for exploration')
-parser.add_argument('--decay', type=float, default=.99,
+parser.add_argument('--decay', type=float, default=.999,
                     help='how much eps decays')
-parser.add_argument('--decay-limit', type=float, default=1e-4,
+parser.add_argument('--decay-limit', type=float, default=1e-3,
                     help='how much eps decays')
-parser.add_argument('--dilation', type=int, default=40,
-                    help='Dilation parameter for manager LSTM.')
+parser.add_argument('--layers', type=int, default=5,
+                    help='transformer layers for manager')
 
 # EXPERIMENT RELATED PARAMS
 parser.add_argument('--run-name', type=str, default='baseline',
@@ -68,7 +68,7 @@ def experiment(args):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     
-    envs = make_envs(args.env_name, args.num_workers, args.seed)
+    envs = make_envs(args.env_name, args.num_workers, args)
     feudalnet = FeudalTransformer(
         num_workers=args.num_workers,
         input_dim=envs.single_observation_space.shape,
@@ -76,7 +76,7 @@ def experiment(args):
         hidden_dim_worker=args.hidden_dim_worker,
         n_actions=envs.single_action_space.n,
         time_horizon=args.time_horizon,
-        dilation=args.dilation,
+        dilation=args.layers,
         device=device,
         mlp=args.mlp,
         args=args)
@@ -87,6 +87,7 @@ def experiment(args):
     x, info = envs.reset(seed=args.seed)
     step = 0
     visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
+    scalar = torch.amp.GradScaler(device)
     while step < args.max_steps:
         feudalnet.repackage_hidden()
         goals, states, zs, actions, rewards = feudalnet.detach_sequences(goals, states, zs, actions, rewards)
@@ -132,8 +133,9 @@ def experiment(args):
             next_v_w = next_v_w.detach()
         
         optimizer.zero_grad()
-        loss, loss_dict = feudal_loss(storage, next_v_m, next_v_w, args)
-        loss.backward()
+        with torch.amp.autocast(device_type=device.type):
+            loss, loss_dict = feudal_loss(storage, next_v_m, next_v_w, args)
+        scalar.scale(loss).backward()
         torch.nn.utils.clip_grad_norm_(feudalnet.parameters(), args.grad_clip)
         optimizer.step()
         logger.log_scalars(loss_dict, step)

@@ -50,7 +50,7 @@ class FeudalTransformer(nn.Module):
             zs.pop(0)
         zs.append(z)
 
-        goal, state, value_m = self.manager(zs, actions, rewards, mask)
+        goal, state, value_m = self.manager(zs, actions, rewards, goals, mask)
         
         if len(goals) >= (2 * self.c + 1):
             goals.pop(0)
@@ -112,22 +112,23 @@ class ManagerTransformer(nn.Module):
         self.reward_embed = nn.Linear(1, self.d)
         self.Mspace = nn.Linear(self.d, self.d)
 
-        layer = nn.TransformerEncoderLayer(d_model=self.d * 3, nhead=8, dim_feedforward=1024)
+        layer = nn.TransformerEncoderLayer(d_model=self.d * 4, nhead=8, dim_feedforward=512, dropout=0.1, batch_first=True)
         self.encoders = nn.TransformerEncoder(layer, 1)
 
-        self.fc = nn.Linear(self.d * (self.k * 2 + 1) * 3, self.d)
-        self.critic = nn.Linear(self.d * (self.k * 2 + 1) * 3, 1)
+        self.fc = nn.Linear(self.d * (self.k * 2 + 1) * 4, self.d)
+        self.critic = nn.Linear(self.d * (self.k * 2 + 1) * 4, 1)
     
-    def forward(self, zs, actions, rewards, mask):
+    def forward(self, zs, actions, rewards, goals, mask):
         zs = torch.stack(zs)
         actions = torch.stack(actions)
         rewards = torch.stack(rewards)
+        goals = torch.stack(goals)
         mask = torch.stack(mask)
         states = F.relu(self.Mspace(zs * mask))
         state = states[-1]
         a_embed = self.action_embed(actions * mask)
         r_embed = self.reward_embed(rewards * mask)
-        chrono_emb= torch.cat((states, a_embed, r_embed), dim=2)
+        chrono_emb= torch.cat((states, goals, a_embed, r_embed), dim=2)
         
         goal_hat = self.encoders(chrono_emb)
         goal_hat = goal_hat.reshape([goal_hat.shape[1], goal_hat.shape[0] * goal_hat.shape[2]])
@@ -137,8 +138,8 @@ class ManagerTransformer(nn.Module):
         
         state = state.detach()
         goal = F.normalize(goal_hat, dim=-1, eps=1e-6)
-        if (self.eps > torch.rand(1)[0]):
-            goal = torch.randn_like(goal, requires_grad=False)
+        # if (self.eps > torch.rand(1)[0]):
+        #     goal = torch.randn_like(goal, requires_grad=False)
         return goal, state, value_est
     
     def state_goal_cosine(self, states, goals, masks):

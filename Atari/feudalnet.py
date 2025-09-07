@@ -107,9 +107,8 @@ class Perception(nn.Module):
             )
     
     def forward(self, x):
-        if torch.isnan(x).any():
-            print('here')
-        return self.percept(x)
+        # return self.percept(x)
+        return torch.utils.checkpoint.checkpoint(self.percept, x, use_reentrant=False)
 
 class Manager(nn.Module):
     def __init__(self, c, d, r, args, device):
