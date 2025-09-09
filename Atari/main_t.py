@@ -4,6 +4,7 @@ from utils import make_envs, take_action, Logger, Storage, VectorEnvVisualizer
 from feudalnet import FeudalNetwork, feudal_loss
 from feudaltransformer import FeudalTransformer
 import gymnasium as gym
+import time
 import os
 from tetris_gymnasium.envs.tetris import Tetris
 
@@ -33,7 +34,7 @@ parser.add_argument('--time-horizon', type=int, default=40,
                     help='Manager horizon (c)')
 parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
-parser.add_argument('--hidden-dim-worker', type=int, default=16,
+parser.add_argument('--hidden-dim-worker', type=int, default=8,
                     help='Hidden dim for worker (k)')
 parser.add_argument('--gamma-w', type=float, default=0.99,
                     help="discount factor worker")
@@ -88,6 +89,7 @@ def experiment(args):
     step = 0
     visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
     scalar = torch.amp.GradScaler(device)
+    batch_idx = 0
     while step < args.max_steps:
         feudalnet.repackage_hidden()
         goals, states, zs, actions, rewards = feudalnet.detach_sequences(goals, states, zs, actions, rewards)
@@ -106,7 +108,7 @@ def experiment(args):
             rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(device))
             if step % 160 == 0:
                 visualizer.capture_frame(envs, step, action, reward, terminated, truncated, info)
-            # logger.log_episode(info, step)
+            logger.log_episode(info, step)
             mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(args.device)
             masks.pop(0)
             masks.append(mask)
@@ -138,15 +140,20 @@ def experiment(args):
         scalar.scale(loss).backward()
         torch.nn.utils.clip_grad_norm_(feudalnet.parameters(), args.grad_clip)
         optimizer.step()
+        if batch_idx % 20 == 0:
+            torch.cuda.synchronize()
+            time.sleep(2)
+        batch_idx += 1
         logger.log_scalars(loss_dict, step)
-            # if len(save_steps) > 0 and step > save_steps[0]:
-            #     torch.save({
-            #         'model': feudalnet.state_dict(),
-            #         'args': args,
-            #         'processor_mean': feudalnet.preprocessor.rms.mean,
-            #         'optim': optimizer.state_dict()},
-            #         f'models/{args.env_name}_{args.run_name}_step={step}.pt')
-            #     save_steps.pop(0)
+        if len(save_steps) > 0 and step > save_steps[0]:
+            torch.save({
+                'model': feudalnet.state_dict(),
+                'args': args,
+                'processor_mean': feudalnet.preprocessor.rms.mean,
+                'optim': optimizer.state_dict()},
+                f'models/{args.env_name[4:]}_{args.run_name}_step={step}.pt')
+            logger.save()
+            save_steps.pop(0)
 
     envs.close()
     torch.save({

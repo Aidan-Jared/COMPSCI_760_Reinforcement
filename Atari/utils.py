@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+import json
 # import cv2
 
 class Logger:
@@ -22,21 +23,22 @@ class Logger:
         self.log_name = dt.replace(second=0, microsecond=0)
         self.start_time = time.time()
         self.n_eps = 0
+        self.log = dict()
 
         if not os.path.exists('logs'):
             os.makedirs('logs')
             os.makedirs('models')
         self.writer = SummaryWriter(self.log_name)
 
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s %(message)s',
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler(f'{self.log_name}.log'),
-                ],
-            datefmt='%Y/%m/%d %I:%M:%S %p')
-        logging.info(args)
+        # logging.basicConfig(
+        #     level=logging.DEBUG,
+        #     format='%(asctime)s %(message)s',
+        #     handlers=[
+        #         logging.StreamHandler(),
+        #         logging.FileHandler(f'{self.log_name}.log'),
+        #         ],
+        #     datefmt='%Y/%m/%d %I:%M:%S %p')
+        # logging.info(args)
 
     def log_scalars(self, scalar_dict, step):
         for key, val in scalar_dict.items():
@@ -45,13 +47,16 @@ class Logger:
     def log_episode(self, info, step):
         if info is not None:
             self.n_eps += 1
-            self.log_scalars(info, step)
-            reward = info['returns/episodic_reward']
-            length = info['returns/episodic_length']
             time_expired = (time.time()-self.start_time) / 60 / 60
-            logging.info(f"> ep = {self.n_eps} | total steps = {step}"
-                             f" | reward = {reward} | length = {length}"
-                             f" | hours = {time_expired:.3f}")
+            self.log[self.n_eps] = {'total_reward' : info['total_reward'].tolist(), 'episode_frame_number': info['episode_frame_number'].tolist(), 'time_expired': time_expired}
+            # logging.info(f"> ep = {self.n_eps} | total steps = {step}"
+            #                  f" | reward = {reward} | length = {length}"
+            #                  f" | hours = {time_expired:.3f}")
+    
+    def save(self):
+        with open(f'logs/{self.log_name}', 'w') as r:
+            json.dump(self.log, r)
+
 
 class Storage:
     def __init__(self, size, keys = None):
@@ -201,16 +206,15 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
         current_position = self._get_position(obs)
         # current_score = self._get_score(obs, info)
 
-        modified_reward = reward
+        modified_reward = np.clip(reward,0,10)
         if current_score > self.prev_score:
-            self.total_reward = current_score
             score_increase = current_score - self.prev_score
-            modified_reward += (self.pellet_bonus * score_increase + self.alive) * info['lives'] + self.prev_score
+            modified_reward += (self.pellet_bonus * score_increase + self.alive) * info['lives']
             self.alive += modified_reward * .02
             self.prev_score = current_score
             self.prev_positon = current_position
 
-            modified_reward = self.maximum_reward(modified_reward)
+            # modified_reward = self.maximum_reward(modified_reward)
 
             info.update({
                 'total_reward': self.total_reward,
@@ -246,19 +250,21 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
             self.corridor_history.append(current_position)
             if len(self.corridor_history) >= 20:
                 if self._detect_corridor_oscillation():
-                    corridor_penalty = .1
-                    modified_reward -= corridor_penalty
+                    corridor_penalty = 10
+                    modified_reward -= corridor_penalty 
                     if self.alive > 0:
-                        self.alive -= corner_penalty / 2
-            if info['lives'] == 0 :
+                        self.alive -= corridor_penalty
+            if info['lives'] < self.lives :
                 self.alive = 0
                 self.delay_counter = self.delay
+                modified_reward -= (self.death_penalty + corner_penalty + corner_penalty + stagnation_penalty) * 1 / self.lives
+                self.lives = info['lives']
 
         modified_reward += self.alive
         self.prev_score = current_score
         self.prev_positon = current_position
 
-        modified_reward = self.maximum_reward(modified_reward)
+        # modified_reward = self.maximum_reward(modified_reward)
 
         info.update({
             'total_reward': self.total_reward,
@@ -456,8 +462,8 @@ class VectorEnvVisualizer:
             # Bar chart of actions taken across all environments
             unique_actions, counts = np.unique(actions, return_counts=True)
 
-            if max(info['total_reward']) > self.best_reward:
-                self.best_reward = max(info['total_reward'])
+            if np.mean(info['total_reward']) > self.best_reward:
+                self.best_reward = np.mean(info['total_reward'])
                 self.best_reward_y.append(self.best_reward)
                 self.best_rewards_x.append(step)
             
