@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from dilated_lstm import DilatedLSTM
+from utils import VectorEnvVisualizer, Storage
 
 class FeudalNetwork(nn.Module):
     def __init__(self, num_workers, input_dim, hidden_dim_manager, hidden_dim_worker, n_actions, time_horizon = 10, dilation = 10, device = 'cpu', mlp = False, args = None):
@@ -80,7 +81,6 @@ class FeudalNetwork(nn.Module):
     def eps_decay(self):
         self.manager.eps *= self.decay
         self.worker.eps *= self.decay
-
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp = False):
         super().__init__()
@@ -216,6 +216,33 @@ class Preprocessor:
         x_normalized = np.clip(x_normalized, -3.0, 3.0)
         
         return torch.FloatTensor(x_normalized).to(self.device)
+
+class Qlearn(nn.Module):
+    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):
+        super().__init__()
+        self.d = hidden_dim
+        self.n_actions = n_actions
+
+        self.preprocessor = Preprocessor(input_dim, device, mlp)
+
+        self.perception = Perception(input_dim, self.d, mlp)
+
+        self.fc1 = nn.Linear(self.d, self.d / 2)
+        self.fc2 = nn.Linear(self.d / 2, self.d)
+        self.fc3 = nn.Linear(self.d, self.d / 4)
+        self.fc4 = nn.Linear(self.d, self.n_actions)
+
+        self.to(device)
+    
+    def forward(self, x):
+        x = self.preprocessor(x)
+        x = self.perception(x)
+        x = x.reshape(x.size(0), - 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = self.fc4(x)
+        return x
 
 class RunningMeanStd:
     def __init__(self, epsilon = 1e-4, shape=()):
