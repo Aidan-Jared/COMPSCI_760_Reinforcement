@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import math
 
 from feudalnet import Perception, Preprocessor, Worker
 
@@ -112,7 +113,13 @@ class ManagerTransformer(nn.Module):
         self.reward_embed = nn.Linear(1, self.d)
         self.Mspace = nn.Linear(self.d, self.d)
 
-        layer = nn.TransformerEncoderLayer(d_model=self.d * 4, nhead=8, dim_feedforward=512, dropout=0.1, batch_first=True)
+        position = torch.arange((self.k * 2) + 1).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, self.d, 2) * (-math.log(10000.0) / self.d))
+        self.pe = torch.zeros((self.k * 2) + 1, 1, self.d).to(device)
+        self.pe[:, 0, 0::2] = torch.sin(position * div_term)
+        self.pe[:, 0, 1::2] = torch.cos(position * div_term)
+
+        layer = nn.TransformerEncoderLayer(d_model=self.d * 4, nhead=8, dim_feedforward=512, dropout=0, batch_first=False)
         self.encoders = nn.TransformerEncoder(layer, 1)
 
         self.fc = nn.Linear(self.d * (self.k * 2 + 1) * 4, self.d)
@@ -128,7 +135,7 @@ class ManagerTransformer(nn.Module):
         state = states[-1]
         a_embed = self.action_embed(actions * mask)
         r_embed = self.reward_embed(rewards * mask)
-        chrono_emb= torch.cat((states, goals, a_embed, r_embed), dim=2)
+        chrono_emb= torch.cat(((states + self.pe) * mask, (goals  + self.pe) * mask, (a_embed  + self.pe) * mask, (r_embed  + self.pe) * mask), dim=2)
         
         goal_hat = self.encoders(chrono_emb)
         goal_hat = goal_hat.reshape([goal_hat.shape[1], goal_hat.shape[0] * goal_hat.shape[2]])

@@ -66,14 +66,14 @@ class Train:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.grad_clip)
             self.optimizer.step()
             self.logger.log_scalars(loss_dict, step)
-            # if len(save_steps) > 0 and step > save_steps[0]:
-                #     torch.save({
-                #         'model': feudalnet.state_dict(),
-                #         'args': args,
-                #         'processor_mean': feudalnet.preprocessor.rms.mean,
-                #         'optim': optimizer.state_dict()},
-                #         f'models/{args.env_name}_{args.run_name}_step={step}.pt')
-                #     save_steps.pop(0)
+            if len(save_steps) > 0 and step > save_steps[0]:
+                    torch.save({
+                        'model': self.model.state_dict(),
+                        'args': self.args,
+                        'processor_mean': self.model.preprocessor.rms.mean,
+                        'optim': self.optimizer.state_dict()},
+                        f'models/{self.args.env_name[4:]}_{self.args.run_name}_step={step}.pt')
+                    save_steps.pop(0)
         self.envs.close()
         torch.save({
         'model': self.model.state_dict(),
