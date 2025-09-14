@@ -1,6 +1,5 @@
 import gymnasium as gym
 from gymnasium.wrappers import AtariPreprocessing, TransformReward
-from vizdoom import gymnasium_wrapper
 import ale_py
 gym.register_envs(ale_py)
 from collections import deque, Counter
@@ -527,12 +526,16 @@ def atari_wraper(env):
     env = PacmanRewardWrapper(env)
     return env
 
-def make_envs(env_name, num_envs, args):
+def make_envs(env_name, num_envs, args, train=True):
     # 
-    if args.mlp == 1:
+    if args.mlp == 1 and train == True:
         envs = gym.make_vec(env_name, num_envs, wrappers=[atari_wraper], vectorization_mode="sync", render_mode='rgb_array', obs_type='ram')
-    else:
+    elif train == True:
         envs = gym.make_vec(env_name, num_envs, wrappers=[atari_wraper], vectorization_mode="sync", render_mode='rgb_array')
+    elif args.mpl == 1 and train == False:
+        envs = gym.make_vec(env_name, num_envs, vectorization_mode="sync", render_mode='rgb_array', obs_type='ram')
+    else:
+        envs = gym.make_vec(env_name, num_envs, vectorization_mode="sync", render_mode='rgb_array')
     envs.reset(seed=args.seed)
     return envs
 

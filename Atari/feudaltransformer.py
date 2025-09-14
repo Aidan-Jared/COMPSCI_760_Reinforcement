@@ -119,8 +119,8 @@ class ManagerTransformer(nn.Module):
         self.pe[:, 0, 0::2] = torch.sin(position * div_term)
         self.pe[:, 0, 1::2] = torch.cos(position * div_term)
 
-        layer = nn.TransformerEncoderLayer(d_model=self.d * 4, nhead=8, dim_feedforward=512, dropout=0, batch_first=False)
-        self.encoders = nn.TransformerEncoder(layer, 1)
+        layer = nn.TransformerEncoderLayer(d_model=self.d * 4, nhead=4, dim_feedforward=512, dropout=0, batch_first=False)
+        self.encoders = nn.TransformerEncoder(layer, 2)
 
         self.fc = nn.Linear(self.d * (self.k * 2 + 1) * 4, self.d)
         self.critic = nn.Linear(self.d * (self.k * 2 + 1) * 4, 1)

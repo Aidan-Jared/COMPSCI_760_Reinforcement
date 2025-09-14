@@ -48,11 +48,11 @@ parser.add_argument('--decay', type=float, default=.999,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudal',
+parser.add_argument('--run-name', type=str, default='feudalTransformer',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
-parser.add_argument('--model', type=str, default='feudal',
+parser.add_argument('--model', type=str, default='feudalTransformer',
                     help="model to train")
 parser.add_argument('--decay-limit', type=float, default=1e-3,
                     help='how much eps decays')
@@ -84,16 +84,16 @@ def experiment(args):
             args=args)
     elif args.model =='feudalTransformer':
         feudalnet = FeudalTransformer(
-        num_workers=args.num_workers,
-        input_dim=envs.single_observation_space.shape,
-        hidden_dim_manager=args.hidden_dim_manager,
-        hidden_dim_worker=args.hidden_dim_worker,
-        n_actions=envs.single_action_space.n,
-        time_horizon=args.time_horizon,
-        dilation=args.dilation,
-        device=device,
-        mlp=args.mlp,
-        args=args)
+            num_workers=args.num_workers,
+            input_dim=envs.single_observation_space.shape,
+            hidden_dim_manager=args.hidden_dim_manager,
+            hidden_dim_worker=args.hidden_dim_worker,
+            n_actions=envs.single_action_space.n,
+            time_horizon=args.time_horizon,
+            dilation=args.dilation,
+            device=device,
+            mlp=args.mlp,
+            args=args)
     else:
         feudalnet = Qlearn(
             input_dim=envs.single_observation_space.shape,
