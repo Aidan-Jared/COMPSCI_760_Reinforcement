@@ -10,35 +10,41 @@ import json
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 
-parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
-                    help='gym environment name')
+parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudal_seed=0_step=30003200.pt',
+                    help='path to model save data')
+
+arg = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def test_feudal(model, args, envs):
     terminated, truncated = False, False
+    total_reward = 0
     goals, states, masks = model.init_obj()
     step = 0 
     x, info = envs.reset()
-    visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
     while not terminated and not truncated:
         action_dist, goals, states, value_m, value_w = model(x, goals, states, masks[-1])
-        action, logp, entropy = take_action(action_dist)
+        action = torch.multinomial(action_dist, num_samples=1).cpu().numpy()[0]
+        # action, logp, entropy = take_action(action_dist)
         x, reward, terminated, truncated, info = envs.step(action)
-        if step % 4 == 0:
+        if step % 4 == 1:
             visualizer.capture_frame(envs, step, action, reward, terminated, truncated, info)
         step += 1
+        total_reward = info['total_reward']
 
-    return reward
+    return total_reward
     
 
 
 if __name__ == "__main__":
 
-    save_data = torch.load('models/MsPacman-v5_feudal_seed=0_step=30003200.pt', weights_only=False)
+    save_data = torch.load(arg.model, weights_only=False)
     args = save_data['args']
     model_weights = save_data['model']
-    envs = make_envs(args.args.env_name, 1, args, train=False)
+    args.num_workers = 1
+    envs = make_envs(args.env_name, args.num_workers, args, train=False)
+    visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
     if args.model == 'feudal':
         model = FeudalNetwork(
             num_workers=args.num_workers,
@@ -80,3 +86,6 @@ if __name__ == "__main__":
                 pass
 
             scores[i] = reward
+            print(reward)
+    with open(f'scores/{args.model}_{args.env_name[4:]}', 'r') as r:
+        json.dump(scores, r)

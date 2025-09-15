@@ -462,6 +462,50 @@ class VectorEnvVisualizer:
         except Exception as e:
             print(f"Visualization error: {e}")
     
+    def capture_frame_test(self, envs, step, actions, rewards, terminated, truncated,  info):
+        """Capture frame from vector environment"""
+        try:
+            # Get frames from all environments
+            frames = envs.call('render')
+            
+            if frames is None or len(frames) <= self.env_idx:
+                return
+                
+            # Focus on one environment
+            frame = frames[self.env_idx]
+            if frame is None:
+                return
+                
+            self.frames.append(frame)
+            
+            # Display the selected environment
+            if self.im1 is None:
+                self.im1 = self.ax1.imshow(frame)
+                self.ax1.set_title(f'Environment {self.env_idx}')
+                self.ax1.axis('off')
+            else:
+                self.im1.set_array(frame)
+            
+            # Show info for this specific environment
+            action = actions[self.env_idx] if hasattr(actions, '__len__') else actions
+            reward = rewards[self.env_idx] if hasattr(rewards, '__len__') else rewards
+            done = terminated[self.env_idx] or truncated[self.env_idx]
+            
+            self.ax1.set_title(f'Env {self.env_idx} | Step: {step} | Action: {action} | Reward: {reward:.2f} | Done: {done}')
+            
+            # Show action distribution visualization (if you want)
+            # self.visualize_action_dist(actions, rewards, info, step)
+            
+            plt.pause(0.01)
+            
+            # Save episode when done
+            # if done and self.save_videos:
+                # self.save_episode_video()
+                
+        except Exception as e:
+            print(f"Visualization error: {e}")
+    
+    
     def visualize_action_dist(self, actions, rewards, info, step):
         """Show action distribution across all environments"""
         if hasattr(actions, '__len__'):
@@ -528,14 +572,10 @@ def atari_wraper(env):
 
 def make_envs(env_name, num_envs, args, train=True):
     # 
-    if args.mlp == 1 and train == True:
+    if args.mlp == 1:
         envs = gym.make_vec(env_name, num_envs, wrappers=[atari_wraper], vectorization_mode="sync", render_mode='rgb_array', obs_type='ram')
-    elif train == True:
-        envs = gym.make_vec(env_name, num_envs, wrappers=[atari_wraper], vectorization_mode="sync", render_mode='rgb_array')
-    elif args.mpl == 1 and train == False:
-        envs = gym.make_vec(env_name, num_envs, vectorization_mode="sync", render_mode='rgb_array', obs_type='ram')
     else:
-        envs = gym.make_vec(env_name, num_envs, vectorization_mode="sync", render_mode='rgb_array')
+        envs = gym.make_vec(env_name, num_envs, wrappers=[atari_wraper], vectorization_mode="sync", render_mode='rgb_array')
     envs.reset(seed=args.seed)
     return envs
 

@@ -194,6 +194,7 @@ class Worker(nn.Module):
     
 class Preprocessor:
     def __init__(self, shape, device='cpu', mlp=False):
+        self.mlp = mlp
         if mlp:
             self.shape = (shape[-1],)
         else:
@@ -202,20 +203,23 @@ class Preprocessor:
         self.rms = RunningMeanStd(shape = (1,) + self.shape)
 
     def __call__(self, x):
-        x = np.asarray(x).reshape(x.shape[0], *self.shape)
-        self.rms.update(x)
-        
-        # Check if std is reasonable
-        std = np.sqrt(self.rms.var + 1e-5)
-        if std.mean() < 1e-3:  # Too small, use simple normalization
-            x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+        if not self.mlp:
+            x = np.asarray(x).reshape(x.shape[0], *self.shape)
+            self.rms.update(x)
+            
+            # Check if std is reasonable
+            std = np.sqrt(self.rms.var + 1e-5)
+            if std.mean() < 1e-3:  # Too small, use simple normalization
+                x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+            else:
+                x_normalized = (x - self.rms.mean) / std
+            
+            # CRITICAL: Clip to reasonable range
+            x_normalized = np.clip(x_normalized, -3.0, 3.0)
+            
+            return torch.FloatTensor(x_normalized).to(self.device)
         else:
-            x_normalized = (x - self.rms.mean) / std
-        
-        # CRITICAL: Clip to reasonable range
-        x_normalized = np.clip(x_normalized, -3.0, 3.0)
-        
-        return torch.FloatTensor(x_normalized).to(self.device)
+            return x
 
 class Qlearn(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):
