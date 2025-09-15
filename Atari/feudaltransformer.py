@@ -43,7 +43,6 @@ class FeudalTransformer(nn.Module):
 
     def forward(self, x, zs, actions, rewards, goals, states, mask, save=True):
         x = self.preprocessor(x)
-        # x = torch.FloatTensor(x).to(self.device)
         z = self.perception(x)
         if torch.isnan(z).any():
             print('here')
@@ -145,8 +144,6 @@ class ManagerTransformer(nn.Module):
         
         state = state.detach()
         goal = F.normalize(goal_hat, dim=-1, eps=1e-6)
-        # if (self.eps > torch.rand(1)[0]):
-        #     goal = torch.randn_like(goal, requires_grad=False)
         return goal, state, value_est
     
     def state_goal_cosine(self, states, goals, masks):

@@ -18,6 +18,7 @@ class Train:
         self.args = args
 
     def train_feudal(self):
+        eps = self.args.eps
         save_steps =  list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
         goals, states, masks = self.model.init_obj()
         x, info = self.envs.reset()
@@ -33,7 +34,7 @@ class Train:
 
             for _ in range(self.num_steps):
                 action_dist, goals, states, value_m, value_w = self.model(x, goals, states, masks[-1])
-                action, logp, entropy = take_action(action_dist)
+                action, logp, entropy = take_action(action_dist, eps)
                 x, reward, terminated, truncated, info = self.envs.step(action)
                 if step % 160 == 0:
                     visualizer.capture_frame(self.envs, step, action, reward, terminated, truncated, info)
@@ -52,8 +53,8 @@ class Train:
                     's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
                     'm': mask
                 })
-                if step % 640 == 0 and self.model.manager.eps > self.args.decay_limit:
-                    self.model.eps_decay()
+                if step % 640 == 0 and eps > self.args.decay_limit:
+                    eps *= self.args.decay
 
                 step += self.num_workers
             with torch.no_grad():
@@ -83,6 +84,7 @@ class Train:
         f'models/{self.args.env_name}_{self.args.run_name}_steps={step}.pt')
         
     def train_transformer(self):
+        eps = self.args.eps
         save_steps =  list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
         goals, states, masks, actions, rewards, zs = self.model.init_obj()
         x, info = self.envs.reset(seed=self.args.seed)
@@ -100,7 +102,7 @@ class Train:
 
             for _ in range(self.num_steps):
                 action_dist, goals, states, zs, value_m, value_w = self.model(x, zs, actions, rewards, goals, states, masks)
-                action, logp, entropy = take_action(action_dist)
+                action, logp, entropy = take_action(action_dist, eps)
                 x, reward, terminated, truncated, info = self.envs.step(action)
                 actions.pop(0)
                 rewards.pop(0)
@@ -126,8 +128,8 @@ class Train:
 
                 step += self.args.num_workers
 
-                if step % 640 == 0 and self.model.manager.eps > self.args.decay_limit:
-                    self.model.eps_decay()
+                if step % 640 == 0 and eps > self.args.decay_limit:
+                    eps *= self.args.eps_decay
 
             with torch.no_grad():
                 *_, next_v_m, next_v_w = self.model(x, zs, actions, rewards, goals, states, masks, save = False)

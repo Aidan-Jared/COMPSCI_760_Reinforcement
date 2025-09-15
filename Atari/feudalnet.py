@@ -116,7 +116,6 @@ class Manager(nn.Module):
         self.c = c # time horizon
         self.d = d # hidden dim size
         self.r = r # dilation elvel
-        self.eps = args.eps
         self.device = device
 
         self.Mspace = nn.Linear(self.d, self.d)
@@ -132,8 +131,6 @@ class Manager(nn.Module):
         goal = F.normalize(goal_hat)
         state = state.detach()
 
-        if (self.eps > torch.rand(1)[0]):
-            goal = torch.randn_like(goal, requires_grad=False)
         return goal, hidden, state, value_est
     
     def state_goal_cosine(self, states, goals, masks):
@@ -154,7 +151,6 @@ class Worker(nn.Module):
         self.k = k
         self.num_actions = num_actions
         self.device = device
-        self.eps = args.eps
 
         self.Wrnn = nn.LSTMCell(d, k * self.num_actions)
         self.phi = nn.Linear(d, k, bias=False)
@@ -176,8 +172,6 @@ class Worker(nn.Module):
 
         u = u.reshape(u.shape[0], self.k, self.num_actions)
         a = F.softmax(torch.einsum("bk, bka -> ba", w, u), dim=-1)
-        if (self.eps > torch.rand(1)[0]):
-            a = F.softmax(torch.randn_like(a, requires_grad=False))
         return a, hidden, value_est
     
     def intrinsic_reward(self, states, goals, masks):
@@ -219,7 +213,7 @@ class Preprocessor:
             
             return torch.FloatTensor(x_normalized).to(self.device)
         else:
-            return x
+            return torch.FloatTensor(x).to(self.device)
 
 class Qlearn(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):

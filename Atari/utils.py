@@ -579,9 +579,13 @@ def make_envs(env_name, num_envs, args, train=True):
     envs.reset(seed=args.seed)
     return envs
 
-def take_action(a):
+def take_action(a, eps):
     dist = torch.distributions.Categorical(a)
-    action = dist.sample()
+    if np.random.rand() < eps:
+        action = dist.sample()
+    else:
+        action = torch.argmax(a, dim=-1)
     logp = dist.log_prob(action)
     entropy = dist.entropy()
     return action.cpu().detach().numpy(), logp, entropy
+        

@@ -40,7 +40,7 @@ parser.add_argument('--gamma-m', type=float, default=0.999,
                     help="discount factor manager")
 parser.add_argument('--alpha', type=float, default=0.5,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=int(1e-5),
+parser.add_argument('--eps', type=float, default=.95,
                     help='Random Gausian goal for exploration')
 parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM.')
@@ -48,13 +48,13 @@ parser.add_argument('--decay', type=float, default=.999,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalTransformer',
+parser.add_argument('--run-name', type=str, default='feudalv2',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
-parser.add_argument('--model', type=str, default='feudalTransformer',
+parser.add_argument('--model', type=str, default='feudal',
                     help="model to train")
-parser.add_argument('--decay-limit', type=float, default=1e-3,
+parser.add_argument('--decay-limit', type=float, default=1e-5,
                     help='how much eps decays')
 
 args = parser.parse_args()
