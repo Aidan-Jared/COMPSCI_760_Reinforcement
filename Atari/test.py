@@ -25,6 +25,7 @@ def test_feudal(model, args, envs):
     x, info = envs.reset()
     while not terminated and not truncated:
         action_dist, goals, states, value_m, value_w = model(x, goals, states, masks[-1])
+        # action = torch.argmax(action_dist, dim=-1)
         action = torch.multinomial(action_dist, num_samples=1).cpu().numpy()[0]
         # action, logp, entropy = take_action(action_dist)
         x, reward, terminated, truncated, info = envs.step(action)
@@ -85,7 +86,7 @@ if __name__ == "__main__":
             elif args.model =='feudalTransformer':
                 pass
 
-            scores[i] = reward
+            scores[i] = reward[0]
             print(reward)
     with open(f'scores/{args.model}_{args.env_name[4:]}', 'r') as r:
         json.dump(scores, r)

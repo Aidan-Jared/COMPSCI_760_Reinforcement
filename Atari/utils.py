@@ -534,9 +534,9 @@ class VectorEnvVisualizer:
 
             self.ax4.clear()
             self.ax4.plot(self.best_rewards_x, self.best_reward_y)
-            self.ax4.set_title('Best reward across time')
+            self.ax4.set_title('Best IQM across time')
             self.ax4.set_xlabel('step')
-            self.ax4.set_ylabel('best reward')
+            self.ax4.set_ylabel('best IQM')
             # Add reward info
             mean_reward = np.mean(rewards) if hasattr(rewards, '__len__') else rewards
             self.ax2.text(0.7, 0.9, f'Mean Reward: {mean_reward:.3f}', 
