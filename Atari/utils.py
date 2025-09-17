@@ -159,7 +159,7 @@ class Reward:
 
 
 class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
-    def __init__(self, env, stagnation_penalty=.01, pellet_bonus=1, death_penalty=1000, stagnation_penalty_enable = True):
+    def __init__(self, env, stagnation_penalty=.001, pellet_bonus=1, death_penalty=1000, stagnation_penalty_enable = True):
         super().__init__(env)
         Reward._init__(self,gamma=.99)
         if stagnation_penalty_enable:
@@ -207,7 +207,7 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
         current_position = self._get_position(obs)
         # current_score = self._get_score(obs, info)
 
-        modified_reward = np.clip(reward,0,200)
+        modified_reward = np.clip(reward,0,20)
         self.pellet_history.append(current_score)
         if current_score > self.prev_score:
             unique = len(set(self.pellet_history))
@@ -254,7 +254,7 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
             if info['lives'] < self.lives :
                 # self.alive = 0
                 self.delay_counter = 0
-                death_penalty = min(100, max(5, info['episode_frame_number'] / 1000))
+                death_penalty = min(100, max(10, info['episode_frame_number'] / 1000))
                 modified_reward -= death_penalty
                 self.lives = info['lives']
                 self.pellet_history = deque(maxlen=1000)

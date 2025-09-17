@@ -38,14 +38,10 @@ class Train:
                 x, reward, terminated, truncated, info = self.envs.step(action)
                 if step % 160 == 0:
                     visualizer.capture_frame(self.envs, step, action, reward, terminated, truncated, info)
-                # logger.log_episode(info, step)
+                self.logger.log_episode(info, step)
 
                 mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(self.device)
-                masks.pop(0)
-                if torch.sum(mask) < self.num_workers:
-                    for idx, i in enumerate(masks):
-                        masks[idx] = i * mask
-                    
+                masks.pop(0)                    
                 masks.append(mask)
 
                 storage.add({
@@ -118,9 +114,10 @@ class Train:
                 self.logger.log_episode(info, step)
                 mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(self.device)
                 masks.pop(0)
-                if torch.sum(mask) < self.num_workers:
-                    for idx, i in enumerate(masks):
-                        masks[idx] = i * mask
+                # with torch.no_grad():
+                #     if torch.sum(mask) < self.num_workers:
+                #         for idx, i in enumerate(masks):
+                #             masks[idx] = i * mask
                     
                 masks.append(mask)
 
@@ -137,7 +134,7 @@ class Train:
 
                 step += self.args.num_workers
 
-                if step % 640 == 0 and eps > self.args.decay_limit:
+                if step % 1280 == 0 and eps > self.args.decay_limit:
                     eps *= self.args.eps_decay
 
             with torch.no_grad():

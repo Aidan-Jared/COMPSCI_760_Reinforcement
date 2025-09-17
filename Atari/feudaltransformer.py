@@ -106,7 +106,7 @@ class ManagerTransformer(nn.Module):
         self.d = d
         self.k = k
         self.layers = layers
-        self.eps = args.eps
+        # self.eps = args.eps
         self.device = device
         self.action_embed = nn.Linear(1, self.d)
         self.reward_embed = nn.Linear(1, self.d)
@@ -129,6 +129,9 @@ class ManagerTransformer(nn.Module):
         actions = torch.stack(actions)
         rewards = torch.stack(rewards)
         goals = torch.stack(goals)
+        if torch.sum(mask[-1]) < 8:
+            mask = [i * mask[-1] for i in mask]
+            print('here')
         mask = torch.stack(mask)
         states = F.relu(self.Mspace(zs * mask))
         state = states[-1]
