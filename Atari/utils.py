@@ -19,15 +19,23 @@ import json
 class Logger:
     def __init__(self, run_name, args):
         dt = datetime.now()
-        self.log_name = dt.replace(second=0, microsecond=0)
-        self.start_time = time.time()
-        self.n_eps = 0
-        self.log = dict()
+
+        #Raw Date time doesn't work as a file name on windows
+        ts = dt.strftime("%Y%m%d-%H%M%S")
 
         if not os.path.exists('logs'):
             os.makedirs('logs')
             os.makedirs('models')
-        self.writer = SummaryWriter(self.log_name)
+
+        self.log_dir = os.path.join("logs", f"{run_name}_{ts}")
+        os.makedirs(self.log_dir, exist_ok=True)
+
+        self.log_name = f"{run_name}_{ts}.json"
+        self.start_time = time.time()
+        self.n_eps = 0
+        self.log = dict()
+
+        self.writer = SummaryWriter(self.log_dir)
 
         # logging.basicConfig(
         #     level=logging.DEBUG,

@@ -218,29 +218,61 @@ class Preprocessor:
 class Qlearn(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):
         super().__init__()
-        self.d = hidden_dim
-        self.n_actions = n_actions
+        self.d = int(hidden_dim)
+        self.n_actions = int(n_actions)
+        self.device = device
 
         self.preprocessor = Preprocessor(input_dim, device, mlp)
+        self.perception   = Perception(input_dim, self.d, mlp)  # outputs [B, d]
 
-        self.perception = Perception(input_dim, self.d, mlp)
+        # Robust integer hidden sizes (avoid float dims from /2, /4)
+        h1 = max(64, self.d // 2)
+        h2 = max(64, self.d // 2)
+        h3 = max(32, self.d // 4)
 
-        self.fc1 = nn.Linear(self.d, self.d / 2)
-        self.fc2 = nn.Linear(self.d / 2, self.d)
-        self.fc3 = nn.Linear(self.d, self.d / 4)
-        self.fc4 = nn.Linear(self.d, self.n_actions)
+        self.head = nn.Sequential(
+            nn.Linear(self.d, h1),
+            nn.ReLU(),
+            nn.Linear(h1, h2),
+            nn.ReLU(),
+            nn.Linear(h2, h3),
+            nn.ReLU(),
+            nn.Linear(h3, self.n_actions),
+        )
 
+        self.apply(self._weight_init)
         self.to(device)
-    
+
+    @staticmethod
+    def _weight_init(m):
+        if isinstance(m, (nn.Linear, nn.modules.conv.Conv2d)):
+            nn.init.orthogonal_(m.weight)
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0.)
+
     def forward(self, x):
         x = self.preprocessor(x)
-        x = self.perception(x)
-        x = x.reshape(x.size(0), - 1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
+        z = self.perception(x)
+        q = self.head(z)
+        return q
+
+    @torch.no_grad()
+    def act(self, obs, eps: float = 0.05):
+        # Ensure batch dimension
+        single = False
+        if not torch.is_tensor(obs):
+            # Preprocessor can handle numpy; just keep flag for output shape
+            pass
+        else:
+            single = (obs.dim() == 3) or (obs.dim() == 1)
+
+        q = self.forward(obs if not single else obs.unsqueeze(0))
+        if eps > 0 and torch.rand(1, device=q.device).item() < eps:
+            a = torch.randint(self.n_actions, (q.size(0),), device=q.device)
+        else:
+            a = q.argmax(dim=-1)
+
+        return a[0] if single else a
 
 class RunningMeanStd:
     def __init__(self, epsilon = 1e-4, shape=()):
