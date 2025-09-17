@@ -12,7 +12,7 @@ parser.add_argument('--lr', type=float, default=0.0005,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=16,
+parser.add_argument('--num-workers', type=int, default=32,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
@@ -40,11 +40,11 @@ parser.add_argument('--gamma-m', type=float, default=0.999,
                     help="discount factor manager")
 parser.add_argument('--alpha', type=float, default=0.5,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=.95,
+parser.add_argument('--eps', type=float, default=.75,
                     help='Random Gausian goal for exploration')
 parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM.')
-parser.add_argument('--decay', type=float, default=.999,
+parser.add_argument('--decay', type=float, default=.9999,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
@@ -54,7 +54,7 @@ parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, default='feudal',
                     help="model to train")
-parser.add_argument('--decay-limit', type=float, default=1e-5,
+parser.add_argument('--decay-limit', type=float, default=1e-3,
                     help='how much eps decays')
 
 args = parser.parse_args()

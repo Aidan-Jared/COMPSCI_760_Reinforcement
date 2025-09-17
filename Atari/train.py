@@ -58,7 +58,7 @@ class Train:
                     's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
                     'm': mask
                 })
-                if step % 640 == 0 and eps > self.args.decay_limit:
+                if step % 1280 == 0 and eps > self.args.decay_limit and step > 1e6:
                     eps *= self.args.decay
 
                 step += self.num_workers

@@ -10,7 +10,7 @@ import json
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 
-parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudal_seed=0_step=30003200.pt',
+parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudalv2_seed=0_step=30003200.pt',
                     help='path to model save data')
 
 arg = parser.parse_args()
@@ -25,8 +25,8 @@ def test_feudal(model, args, envs):
     x, info = envs.reset()
     while not terminated and not truncated:
         action_dist, goals, states, value_m, value_w = model(x, goals, states, masks[-1])
-        # action = torch.argmax(action_dist, dim=-1)
-        action = torch.multinomial(action_dist, num_samples=1).cpu().numpy()[0]
+        action = torch.argmax(action_dist, dim=-1).cpu()
+        # action = torch.multinomial(action_dist, num_samples=1).cpu().numpy()[0]
         # action, logp, entropy = take_action(action_dist)
         x, reward, terminated, truncated, info = envs.step(action)
         if step % 4 == 1:
@@ -88,5 +88,5 @@ if __name__ == "__main__":
 
             scores[i] = reward[0]
             print(reward)
-    with open(f'scores/{args.model}_{args.env_name[4:]}', 'r') as r:
+    with open(f'scores/{args.model}_{args.env_name[4:]}', 'w') as r:
         json.dump(scores, r)
