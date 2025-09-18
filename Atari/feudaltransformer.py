@@ -50,7 +50,7 @@ class FeudalTransformer(nn.Module):
             zs.pop(0)
         zs.append(z)
 
-        goal, state, value_m = self.manager(zs, actions, rewards, goals, mask)
+        goal, state, value_m = self.manager(zs[:-self.c], actions[:-self.c], rewards[:-self.c], goals[:-self.c], mask[:-self.c])
         
         if len(goals) >= (2 * self.c + 1):
             goals.pop(0)
@@ -108,42 +108,50 @@ class ManagerTransformer(nn.Module):
         self.layers = layers
         # self.eps = args.eps
         self.device = device
-        self.action_embed = nn.Linear(1, self.d)
-        self.reward_embed = nn.Linear(1, self.d)
+        self.action_embed = nn.Linear(1, self.d, bias=False)
+        self.reward_embed = nn.Linear(1, self.d, bias=False)
         self.Mspace = nn.Linear(self.d, self.d)
 
-        position = torch.arange((self.k * 2) + 1).unsqueeze(1)
+        position = torch.arange(self.k + 1).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, self.d, 2) * (-math.log(10000.0) / self.d))
-        self.pe = torch.zeros((self.k * 2) + 1, 1, self.d).to(device)
+        self.pe = torch.zeros(self.k + 1, 1, self.d).to(device)
         self.pe[:, 0, 0::2] = torch.sin(position * div_term)
         self.pe[:, 0, 1::2] = torch.cos(position * div_term)
 
-        layer = nn.TransformerEncoderLayer(d_model=self.d * 4, nhead=4, dim_feedforward=512, dropout=0, batch_first=False)
-        self.encoders = nn.TransformerEncoder(layer, 2)
+        layer = nn.TransformerEncoderLayer(d_model=self.d, nhead=4, dim_feedforward=512, dropout=0, batch_first=False)
+        self.transformer = nn.Transformer(d_model=self.d, nhead=8, dim_feedforward=self.d * 4, dropout= 0, batch_first=False, num_decoder_layers=1, num_encoder_layers=1)
+        self.encoders = nn.TransformerEncoder(layer, 1)
 
-        self.fc = nn.Linear(self.d * (self.k * 2 + 1) * 4, self.d)
-        self.critic = nn.Linear(self.d * (self.k * 2 + 1) * 4, 1)
+        self.fc = nn.Linear(self.d, self.d)
+        self.critic = nn.Linear(self.d, 1)
     
     def forward(self, zs, actions, rewards, goals, mask):
         zs = torch.stack(zs)
         actions = torch.stack(actions)
         rewards = torch.stack(rewards)
         goals = torch.stack(goals)
-        if torch.sum(mask[-1]) < 8:
-            mask = [i * mask[-1] for i in mask]
-            print('here')
+        # if torch.sum(mask[-1]) < 8:
+        #     print('here')
         mask = torch.stack(mask)
-        states = F.relu(self.Mspace(zs * mask))
+        states = F.relu(self.Mspace(zs))
         state = states[-1]
-        a_embed = self.action_embed(actions * mask)
-        r_embed = self.reward_embed(rewards * mask)
-        chrono_emb= torch.cat(((states + self.pe) * mask, (goals  + self.pe) * mask, (a_embed  + self.pe) * mask, (r_embed  + self.pe) * mask), dim=2)
+        a_embed = self.action_embed(actions)
+        r_embed = self.reward_embed(rewards)
+        sequence = []
+        for t in range(self.k + 1):
+            sequence.append(((states[t]) * mask[t]) + self.pe[t])
+            sequence.append(((goals[t]) * mask[t]) + self.pe[t])
+            sequence.append(((a_embed[t]) * mask[t]) + self.pe[t])
+            sequence.append(((r_embed[t]) * mask[t]) + self.pe[t])
+        sequence = torch.stack(sequence)
         
-        goal_hat = self.encoders(chrono_emb)
-        goal_hat = goal_hat.reshape([goal_hat.shape[1], goal_hat.shape[0] * goal_hat.shape[2]])
+        # chrono_emb= torch.cat(((states + self.pe) * mask, (goals  + self.pe) * mask, (a_embed  + self.pe) * mask, (r_embed  + self.pe) * mask), dim=0)
+        
+        goal_hat = self.encoders(sequence)
+        # goal_hat = goal_hat.reshape([goal_hat.shape[1], goal_hat.shape[0] * goal_hat.shape[2]])
 
-        value_est = self.critic(goal_hat)
-        goal_hat = self.fc(goal_hat)
+        value_est = self.critic(goal_hat[-1])
+        goal_hat = self.fc(goal_hat[-1])
         
         state = state.detach()
         goal = F.normalize(goal_hat, dim=-1, eps=1e-6)

@@ -90,6 +90,7 @@ class Train:
         eps = self.args.eps
         save_steps =  list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
         goals, states, masks, actions, rewards, zs = self.model.init_obj()
+        cos_mask = masks.copy()
         x, info = self.envs.reset(seed=self.args.seed)
         step = 0
         visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
@@ -116,28 +117,30 @@ class Train:
                 self.logger.log_episode(info, step)
                 mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(self.device)
                 masks.pop(0)
-                # with torch.no_grad():
-                #     if torch.sum(mask) < self.num_workers:
-                #         for idx, i in enumerate(masks):
-                #             masks[idx] = i * mask
+                cos_mask.pop(0)
+                with torch.no_grad():
+                    if torch.sum(mask) < self.num_workers:
+                        for idx, i in enumerate(masks):
+                            masks[idx] = i * mask
                     
                 masks.append(mask)
+                cos_mask.append(mask)
 
                 storage.add({
                     'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
-                    'r_i': self.model.intrinsic_reward(states, goals, masks),
+                    'r_i': self.model.intrinsic_reward(states, goals, cos_mask),
                     'v_w': value_w,
                     'v_m': value_m,
                     'logp': logp.unsqueeze(-1),
                     'entropy': entropy.unsqueeze(-1),
-                    's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
+                    's_goal_cos': self.model.state_goal_cosine(states, goals, cos_mask),
                     'm': mask
                 })
 
                 step += self.args.num_workers
 
                 if step % 1280 == 0 and eps > self.args.decay_limit:
-                    eps *= self.args.eps_decay
+                    eps *= self.args.decay
 
             with torch.no_grad():
                 *_, next_v_m, next_v_w = self.model(x, zs, actions, rewards, goals, states, masks, save = False)
@@ -150,7 +153,7 @@ class Train:
             scalar.scale(loss).backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.grad_clip)
             self.optimizer.step()
-            if batch_idx % 20 == 0:
+            if batch_idx % 20 == 0 and self.device == 'cuda':
                 torch.cuda.synchronize()
                 time.sleep(2)
             batch_idx += 1
