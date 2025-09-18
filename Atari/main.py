@@ -52,10 +52,15 @@ parser.add_argument('--run-name', type=str, default='feudalv2',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
-parser.add_argument('--model', type=str, default='feudal',
-                    help="model to train")
+parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
+                    default='qlearn', help="which model to train")
 parser.add_argument('--decay-limit', type=float, default=1e-3,
                     help='how much eps decays')
+
+# QLEARN SPECIFIC PARAMETERS
+parser.add_argument('--gamma', type=float, default=0.99, help='discount factor for Q-learning')
+parser.add_argument('--target-update', type=int, default=10000, help='steps between target syncs')
+parser.add_argument('--eps-decay-freq', type=int, default=1280, help='steps between epsilon decays')
 
 args = parser.parse_args()
 
@@ -63,6 +68,7 @@ def experiment(args):
     # save_steps =  list(torch.arange(0, int(args.max_steps), int(args.max_steps) // 10).numpy())
     logger = Logger(args.run_name, args)
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    print(f"Using Cuda Device: {device}")
     args.device = device
     torch.manual_seed(args.seed)
     if torch.cuda.is_available() and args.cuda:
@@ -105,14 +111,19 @@ def experiment(args):
     
     optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     train = Train(args, feudalnet, optimizer, envs, logger)
+    print(f"Using model {args.model}")
     if args.model == 'feudal':
         train.train_feudal()
-    if args.model == 'feudalTransformer':
+    elif args.model == 'feudalTransformer':
         train.train_transformer()
+    elif args.model == 'qlearn':
+        train.train_qmodel()
+    else:
+        raise ValueError(f"Unknown model: {args.model}")
 
 if __name__ == "__main__":
-    run_name = args.run_name
+    base = args.run_name
     for seed in range(2):
         args.seed = seed
-        args.run_name = f"{run_name}_seed={seed}"
+        args.run_name = f"{base}_seed={seed}"
         experiment(args)
