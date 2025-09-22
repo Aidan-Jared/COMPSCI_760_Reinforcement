@@ -8,11 +8,11 @@ from train import Train
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=0.0005,
+parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=8,
+parser.add_argument('--num-workers', type=int, default=4,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
@@ -40,20 +40,20 @@ parser.add_argument('--gamma-m', type=float, default=0.999,
                     help="discount factor manager")
 parser.add_argument('--alpha', type=float, default=0.5,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=.75,
+parser.add_argument('--eps', type=float, default=.95,
                     help='Random Gausian goal for exploration')
 parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM.')
-parser.add_argument('--decay', type=float, default=.9999,
+parser.add_argument('--decay', type=float, default=.999,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalTransformer',
+parser.add_argument('--run-name', type=str, default='feudalTransformerv3',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
-                    default='qlearn', help="which model to train")
+                    default='feudalTransformer', help="which model to train")
 parser.add_argument('--decay-limit', type=float, default=1e-3,
                     help='how much eps decays')
 
@@ -88,6 +88,7 @@ def experiment(args):
             device=device,
             mlp=args.mlp,
             args=args)
+        optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     elif args.model =='feudalTransformer':
         feudalnet = FeudalTransformer(
             num_workers=args.num_workers,
@@ -100,6 +101,12 @@ def experiment(args):
             device=device,
             mlp=args.mlp,
             args=args)
+        
+        optimizer = torch.optim.RMSprop([
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr},
+            {'params': feudalnet.worker.parameters(), 'lr': args.lr*1.5},
+            {'params': feudalnet.perception.parameters(), 'lr': args.lr},
+        ], lr= args.lr, alpha=.99, eps=1e-5)
     else:
         feudalnet = Qlearn(
             input_dim=envs.single_observation_space.shape,
@@ -108,10 +115,11 @@ def experiment(args):
             device=device,
             mlp=args.mlp,
         )
+        optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     
-    optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     train = Train(args, feudalnet, optimizer, envs, logger)
     print(f"Using model {args.model}")
+    train.logger.log_model(feudalnet)
     if args.model == 'feudal':
         train.train_feudal()
     elif args.model == 'feudalTransformer':

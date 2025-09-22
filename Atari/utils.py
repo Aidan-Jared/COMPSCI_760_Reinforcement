@@ -60,6 +60,9 @@ class Logger:
             #                  f" | reward = {reward} | length = {length}"
             #                  f" | hours = {time_expired:.3f}")
     
+    def log_model(self, model):
+        self.writer.add_graph(model)
+    
     def save(self):
         with open(f'logs/{self.log_name}', 'w') as r:
             json.dump(self.log, r)
@@ -101,7 +104,7 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class StagnationPenalty:
-    def __init__(self, stagnation_pen = .0001, position_history_size = 1000, stagnation_threshold = .8, penalty_escalation = 1.2, max_mult = 1000, delay=65):
+    def __init__(self, stagnation_pen = .0001, position_history_size = 1000, stagnation_threshold = .8, penalty_escalation = 1.2, max_mult = 1000, delay=40):
         self.stagnation_pen = stagnation_pen
         self.position_history_size = position_history_size
         self.stagnation_threshold = stagnation_threshold
@@ -167,11 +170,11 @@ class Reward:
 
 
 class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
-    def __init__(self, env, stagnation_penalty=.001, pellet_bonus=1, death_penalty=1000, stagnation_penalty_enable = True):
+    def __init__(self, env, stagnation_penalty=.001, pellet_bonus=.1, death_penalty=1000, stagnation_penalty_enable = True):
         super().__init__(env)
         Reward._init__(self,gamma=.99)
         if stagnation_penalty_enable:
-            StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=750, stagnation_threshold=.75, penalty_escalation=1.2)
+            StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=500, stagnation_threshold=.75, penalty_escalation=1.2)
 
         self.pellet_bonus = pellet_bonus
         self.death_penalty = death_penalty
@@ -198,9 +201,9 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
         self.pellet_history = deque(maxlen=1000)
         self.prev_score = 0
         self.prev_positon = self._get_position(obs)
-        self.corridor_history.clear()
+        # self.corridor_history.clear()
         self.lives = info['lives']
-        self.courner_time_counter = 0
+        # self.courner_time_counter = 0
         self.total_reward = 0
         self.delay_counter = 0
         if self.stagnation_penalty_enable:
@@ -215,13 +218,13 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
         current_position = self._get_position(obs)
         # current_score = self._get_score(obs, info)
 
-        modified_reward = np.clip(reward,0,20)
-        self.pellet_history.append(current_score)
+        modified_reward = np.clip(reward,0,100)
+        # self.pellet_history.append(current_score)
         if current_score > self.prev_score:
-            unique = len(set(self.pellet_history))
-            pellet_bonus = unique / len(self.pellet_history) + self.pellet_bonus
+            # unique = len(set(self.pellet_history))
+            # pellet_bonus = unique / len(self.pellet_history) + self.pellet_bonus
             score_increase = current_score - self.prev_score
-            modified_reward += (pellet_bonus * score_increase) * info['lives'] #+ self.alive
+            modified_reward += (self.pellet_bonus * score_increase) * info['lives'] #+ self.alive
             self.prev_score = current_score
             self.prev_positon = current_position
 
@@ -237,26 +240,26 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
 
 
         stagnation_penalty = 0
-        corner_penalty = 0
-        corridor_penalty = 0
+        # corner_penalty = 0
+        # corridor_penalty = 0
 
         if self.stagnation_penalty_enable and current_position:
             stagnation_penalty = self.calculate_stagnation_penalty(current_position)
             modified_reward -= stagnation_penalty
 
-            if self._is_corner_positon(current_position,  obs):
-                self.courner_time_counter += .1
-                if self.courner_time_counter > 20:
-                    corner_penalty = .2 * (self.courner_time_counter)
-                    modified_reward -= corner_penalty
-            else:
-                self.courner_time_counter = max(0,  self.courner_time_counter - 2)
+            # if self._is_corner_positon(current_position,  obs):
+            #     self.courner_time_counter += .1
+            #     if self.courner_time_counter > 20:
+            #         corner_penalty = .2 * (self.courner_time_counter)
+            #         modified_reward -= corner_penalty
+            # else:
+            #     self.courner_time_counter = max(0,  self.courner_time_counter - 2)
             
-            self.corridor_history.append(current_position)
-            if len(self.corridor_history) >= 20:
-                if self._detect_corridor_oscillation():
-                    corridor_penalty = .01
-                    modified_reward -= corridor_penalty 
+            # self.corridor_history.append(current_position)
+            # if len(self.corridor_history) >= 20:
+            #     if self._detect_corridor_oscillation():
+            #         corridor_penalty = .01
+            #         modified_reward -= corridor_penalty 
                     # if self.alive > 0:
                     #     self.alive -= corridor_penalty
             if info['lives'] < self.lives :
@@ -265,7 +268,6 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
                 death_penalty = min(100, max(10, info['episode_frame_number'] / 1000))
                 modified_reward -= death_penalty
                 self.lives = info['lives']
-                self.pellet_history = deque(maxlen=1000)
 
         # modified_reward += self.alive
         self.prev_score = current_score

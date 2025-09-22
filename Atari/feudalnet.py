@@ -151,6 +151,7 @@ class Worker(nn.Module):
         self.k = k
         self.num_actions = num_actions
         self.device = device
+        self.eps = args.eps
 
         self.Wrnn = nn.LSTMCell(d, k * self.num_actions)
         self.phi = nn.Linear(d, k, bias=False)
@@ -172,6 +173,11 @@ class Worker(nn.Module):
 
         u = u.reshape(u.shape[0], self.k, self.num_actions)
         a = F.softmax(torch.einsum("bk, bka -> ba", w, u), dim=-1)
+
+        if self.training and np.random.rand() < self.eps:
+            noise = torch.rand_like(a) * .1
+            a = a + noise
+
         return a, hidden, value_est
     
     def intrinsic_reward(self, states, goals, masks):
@@ -313,7 +319,7 @@ def feudal_loss(storage, next_v_m, next_v_w, args):
     storage.normalize(['ret_w', 'ret_m'])
 
     rewards_intrinsic, value_m, value_w, ret_w, ret_m, logps, entropy, \
-        state_goal_cosines = storage.stack(
+        state_goal_cosines= storage.stack(
             ['r_i', 'v_m', 'v_w', 'ret_w', 'ret_m',
              'logp', 'entropy', 's_goal_cos'])
 
@@ -322,7 +328,7 @@ def feudal_loss(storage, next_v_m, next_v_w, args):
     advantage_m = ret_m - value_m
 
     loss_worker = (logps * advantage_w.detach()).mean()
-    loss_manager = (state_goal_cosines * advantage_m.detach()).mean()
+    loss_manager = (1 - (state_goal_cosines * advantage_m.detach())).mean()
 
     # Update the critics into the right direction
     value_w_loss = 0.5 * advantage_w.pow(2).mean()

@@ -83,13 +83,14 @@ class Train:
         'model': self.model.state_dict(),
         'args': self.args,
         'processor_mean': self.model.preprocessor.rms.mean,
-        'optim': self.ptimizer.state_dict()},
+        'optim': self.optimizer.state_dict()},
         f'models/{self.args.env_name}_{self.args.run_name}_steps={step}.pt')
         
     def train_transformer(self):
         eps = self.args.eps
         save_steps =  list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
-        goals, states, masks, actions, rewards, zs = self.model.init_obj()
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_steps / self.num_steps)
+        goals, states, masks, actions, rewards, zs, frames = self.model.init_obj()
         cos_mask = masks.copy()
         x, info = self.envs.reset(seed=self.args.seed)
         step = 0
@@ -98,20 +99,22 @@ class Train:
         batch_idx = 0
         while step < self.max_steps:
             self.model.repackage_hidden()
-            goals, states, zs, actions, rewards = self.model.detach_sequences(goals, states, zs, actions, rewards)
+            goals, states, zs, actions, rewards, frames = self.model.detach_sequences(goals, states, zs, actions, rewards, frames)
             storage = Storage(size=self.num_steps,
                             keys=['r', 'r_i', 'v_w', 'v_m', 'logp', 'entropy',
                                     's_goal_cos', 'mask', 'ret_w', 'ret_m',
-                                    'adv_m', 'adv_w'])
+                                    'adv_m', 'adv_w', 'kl_loss'])
 
             for _ in range(self.num_steps):
-                action_dist, goals, states, zs, value_m, value_w = self.model(x, zs, actions, rewards, goals, states, masks)
+                action_dist, goals, states, zs, value_m, value_w = self.model(x, zs, actions, rewards, goals, states, frames, masks)
                 action, logp, entropy = take_action(action_dist, eps)
                 x, reward, terminated, truncated, info = self.envs.step(action)
                 actions.pop(0)
                 rewards.pop(0)
+                frames.pop(0)
                 actions.append(torch.FloatTensor(action).unsqueeze(1).to(self.device))
                 rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(self.device))
+                frames.append(torch.FloatTensor(info['episode_frame_number']).unsqueeze(1).to(self.device))
                 if step % 160 == 0:
                     visualizer.capture_frame(self.envs, step, action, reward, terminated, truncated, info)
                 self.logger.log_episode(info, step)
@@ -122,6 +125,8 @@ class Train:
                     if torch.sum(mask) < self.num_workers:
                         for idx, i in enumerate(masks):
                             masks[idx] = i * mask
+                        for idx, i in enumerate(cos_mask[:-self.args.time_horizon]):
+                            cos_mask[idx + self.args.time_horizon] = i * mask
                     
                 masks.append(mask)
                 cos_mask.append(mask)
@@ -134,16 +139,24 @@ class Train:
                     'logp': logp.unsqueeze(-1),
                     'entropy': entropy.unsqueeze(-1),
                     's_goal_cos': self.model.state_goal_cosine(states, goals, cos_mask),
-                    'm': mask
+                    'm': mask,
                 })
 
                 step += self.args.num_workers
 
                 if step % 1280 == 0 and eps > self.args.decay_limit:
+                    # reduce random exploration
                     eps *= self.args.decay
+                    self.model.eps_decay()
+                
+                if step % 5000 == 0:
+                    # shuffel goals to reduce enviroment specific overfitting
+                    if len(goals) > 1:
+                        perm = torch.randperm(self.num_workers)
+                        goals[-1] = goals[-1][perm]
 
             with torch.no_grad():
-                *_, next_v_m, next_v_w = self.model(x, zs, actions, rewards, goals, states, masks, save = False)
+                *_, next_v_m, next_v_w = self.model(x, zs, actions, rewards, goals, states, frames, masks, save = False)
                 next_v_m = next_v_m.detach()
                 next_v_w = next_v_w.detach()
             
@@ -157,6 +170,7 @@ class Train:
                 torch.cuda.synchronize()
                 time.sleep(2)
             batch_idx += 1
+            # scheduler.step()
             self.logger.log_scalars(loss_dict, step)
             if len(save_steps) > 0 and step > save_steps[0]:
                 torch.save({
