@@ -60,9 +60,6 @@ class Logger:
             #                  f" | reward = {reward} | length = {length}"
             #                  f" | hours = {time_expired:.3f}")
     
-    def log_model(self, model):
-        self.writer.add_graph(model)
-    
     def save(self):
         with open(f'logs/{self.log_name}', 'w') as r:
             json.dump(self.log, r)
@@ -240,26 +237,26 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
 
 
         stagnation_penalty = 0
-        # corner_penalty = 0
-        # corridor_penalty = 0
+        corner_penalty = 0
+        corridor_penalty = 0
 
         if self.stagnation_penalty_enable and current_position:
             stagnation_penalty = self.calculate_stagnation_penalty(current_position)
             modified_reward -= stagnation_penalty
 
-            # if self._is_corner_positon(current_position,  obs):
-            #     self.courner_time_counter += .1
-            #     if self.courner_time_counter > 20:
-            #         corner_penalty = .2 * (self.courner_time_counter)
-            #         modified_reward -= corner_penalty
-            # else:
-            #     self.courner_time_counter = max(0,  self.courner_time_counter - 2)
+            if self._is_corner_positon(current_position,  obs):
+                self.courner_time_counter += .1
+                if self.courner_time_counter > 20:
+                    corner_penalty = .2 * (self.courner_time_counter)
+                    modified_reward -= corner_penalty
+            else:
+                self.courner_time_counter = max(0,  self.courner_time_counter - 2)
             
-            # self.corridor_history.append(current_position)
-            # if len(self.corridor_history) >= 20:
-            #     if self._detect_corridor_oscillation():
-            #         corridor_penalty = .01
-            #         modified_reward -= corridor_penalty 
+            self.corridor_history.append(current_position)
+            if len(self.corridor_history) >= 20:
+                if self._detect_corridor_oscillation():
+                    corridor_penalty = .01
+                    modified_reward -= corridor_penalty 
                     # if self.alive > 0:
                     #     self.alive -= corridor_penalty
             if info['lives'] < self.lives :

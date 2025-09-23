@@ -12,7 +12,7 @@ parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=4,
+parser.add_argument('--num-workers', type=int, default=64,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
@@ -48,12 +48,12 @@ parser.add_argument('--decay', type=float, default=.999,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalTransformerv3',
+parser.add_argument('--run-name', type=str, default='feudalv3',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
-                    default='feudalTransformer', help="which model to train")
+                    default='feudal', help="which model to train")
 parser.add_argument('--decay-limit', type=float, default=1e-3,
                     help='how much eps decays')
 
@@ -118,8 +118,8 @@ def experiment(args):
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     
     train = Train(args, feudalnet, optimizer, envs, logger)
+    
     print(f"Using model {args.model}")
-    train.logger.log_model(feudalnet)
     if args.model == 'feudal':
         train.train_feudal()
     elif args.model == 'feudalTransformer':

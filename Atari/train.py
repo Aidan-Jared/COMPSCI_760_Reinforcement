@@ -56,8 +56,10 @@ class Train:
                     's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
                     'm': mask
                 })
-                if step % 1280 == 0 and eps > self.args.decay_limit and step > 1e6:
+                if step % 1280 == 0 and eps > self.args.decay_limit:
+                    # reduce random exploration
                     eps *= self.args.decay
+                    self.model.eps_decay()
 
                 step += self.num_workers
             with torch.no_grad():
