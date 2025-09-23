@@ -56,7 +56,7 @@ class Train:
                     's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
                     'm': mask
                 })
-                if step % 1280 == 0 and eps > self.args.decay_limit:
+                if step % 1280 == 0 and eps > self.args.decay_limit and step > 1e6:
                     # reduce random exploration
                     eps *= self.args.decay
                     self.model.eps_decay()
@@ -146,7 +146,7 @@ class Train:
 
                 step += self.args.num_workers
 
-                if step % 1280 == 0 and eps > self.args.decay_limit:
+                if step % 1280 == 0 and eps > self.args.decay_limit and step > 1e6:
                     # reduce random exploration
                     eps *= self.args.decay
                     self.model.eps_decay()
