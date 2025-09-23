@@ -101,7 +101,7 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class StagnationPenalty:
-    def __init__(self, stagnation_pen = .0001, position_history_size = 1000, stagnation_threshold = .8, penalty_escalation = 1.2, max_mult = 1000, delay=40):
+    def __init__(self, stagnation_pen = .0001, position_history_size = 1000, stagnation_threshold = .8, penalty_escalation = 1.2, max_mult = 1000, delay=65):
         self.stagnation_pen = stagnation_pen
         self.position_history_size = position_history_size
         self.stagnation_threshold = stagnation_threshold
@@ -167,11 +167,11 @@ class Reward:
 
 
 class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
-    def __init__(self, env, stagnation_penalty=.001, pellet_bonus=.1, death_penalty=1000, stagnation_penalty_enable = True):
+    def __init__(self, env, stagnation_penalty=.01, pellet_bonus=.1, death_penalty=1000, stagnation_penalty_enable = True):
         super().__init__(env)
         Reward._init__(self,gamma=.99)
         if stagnation_penalty_enable:
-            StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=500, stagnation_threshold=.75, penalty_escalation=1.2)
+            StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=1000, stagnation_threshold=.75, penalty_escalation=1.2)
 
         self.pellet_bonus = pellet_bonus
         self.death_penalty = death_penalty
@@ -215,13 +215,13 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
         current_position = self._get_position(obs)
         # current_score = self._get_score(obs, info)
 
-        modified_reward = np.clip(reward,0,100)
-        # self.pellet_history.append(current_score)
+        modified_reward = np.clip(reward,0,200)
+        self.pellet_history.append(current_score)
         if current_score > self.prev_score:
-            # unique = len(set(self.pellet_history))
-            # pellet_bonus = unique / len(self.pellet_history) + self.pellet_bonus
+            unique = len(set(self.pellet_history))
+            pellet_bonus = unique / len(self.pellet_history) + self.pellet_bonus
             score_increase = current_score - self.prev_score
-            modified_reward += (self.pellet_bonus * score_increase) * info['lives'] #+ self.alive
+            modified_reward += (pellet_bonus * score_increase) * info['lives']
             self.prev_score = current_score
             self.prev_positon = current_position
 
@@ -258,13 +258,13 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
                     corridor_penalty = .01
                     modified_reward -= corridor_penalty 
                     # if self.alive > 0:
-                    #     self.alive -= corridor_penalty
-            if info['lives'] < self.lives :
+                        # self.alive -= corridor_penalty
+        if info['lives'] < self.lives :
                 # self.alive = 0
-                self.delay_counter = 0
-                death_penalty = min(100, max(10, info['episode_frame_number'] / 1000))
-                modified_reward -= death_penalty
-                self.lives = info['lives']
+            self.delay_counter = 0
+            death_penalty = min(100, max(10, info['episode_frame_number'] / 1000))
+            modified_reward -= death_penalty
+            self.lives = info['lives']
 
         # modified_reward += self.alive
         self.prev_score = current_score
@@ -337,7 +337,7 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty, Reward):
         x_changes = sum(1 for i in range(1, len(x_coords)) if abs(x_coords[i] - x_coords[i-1]) > 5)
         y_changes = sum(1 for i in range(1, len(y_coords)) if abs(y_coords[i] - y_coords[i-1]) > 5)
 
-        return (x_changes > 5 or y_changes > 5)
+        return (x_changes > 10 or y_changes > 10)
     
     def _detect_pacman_position_pixel(self, obs):
         """Detect Ms. Pacman position from pixels"""
