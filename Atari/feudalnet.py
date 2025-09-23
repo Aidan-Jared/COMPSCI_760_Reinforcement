@@ -79,8 +79,11 @@ class FeudalNetwork(nn.Module):
         return goals, states, masks
     
     def eps_decay(self):
-        self.manager.eps *= self.decay
-        self.worker.eps *= self.decay
+        try:
+            self.manager.eps *= self.decay
+            self.worker.eps *= self.decay
+        except:
+            self.worker.eps *= self.decay
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp = False):
         super().__init__()
@@ -117,7 +120,6 @@ class Manager(nn.Module):
         self.d = d # hidden dim size
         self.r = r # dilation elvel
         self.device = device
-        self.eps = args.eps
 
         self.Mspace = nn.Linear(self.d, self.d)
         self.Mrnn = DilatedLSTM(self.d, self.d, self.r)
@@ -131,9 +133,6 @@ class Manager(nn.Module):
 
         goal = F.normalize(goal_hat)
         state = state.detach()
-        if self.training and np.random.rand() < self.eps:
-            noise = torch.rand_like(goal) * .01
-            goal = goal + noise
 
         return goal, hidden, state, value_est
     
@@ -179,7 +178,7 @@ class Worker(nn.Module):
         a = F.softmax(torch.einsum("bk, bka -> ba", w, u), dim=-1)
 
         if self.training and np.random.rand() < self.eps:
-            noise = torch.rand_like(a) * .01
+            noise = torch.rand_like(a) * .1
             a = a + noise
 
         return a, hidden, value_est

@@ -2,3 +2,4 @@
 .venv
 .wsl-venv
 /models
+/logs
