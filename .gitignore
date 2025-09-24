@@ -2,4 +2,6 @@
 .venv
 .wsl-venv
 /models
-/logs
+**/logs/
+**/models/
+**/model_data/

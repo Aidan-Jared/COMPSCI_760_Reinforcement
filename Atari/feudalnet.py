@@ -212,17 +212,19 @@ class Preprocessor:
             
             # Check if std is reasonable
             std = np.sqrt(self.rms.var + 1e-5)
-            if std.mean() < 1e-3:  # Too small, use simple normalization
-                x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+            if std.mean() < 1e-3:
+                x_normalized = (x - 128.0) / 64.0
             else:
                 x_normalized = (x - self.rms.mean) / std
             
             # CRITICAL: Clip to reasonable range
             x_normalized = np.clip(x_normalized, -3.0, 3.0)
             
-            return torch.FloatTensor(x_normalized).to(self.device)
+            # CORRECT FIX: Convert NumPy array directly to a tensor on the correct device and dtype
+            return torch.as_tensor(x_normalized, dtype=torch.float32, device=self.device)
         else:
-            return torch.FloatTensor(x).to(self.device)
+            # CORRECT FIX: Same fix for the MLP case
+            return torch.as_tensor(x, dtype=torch.float32, device=self.device)
 
 class Qlearn(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):

@@ -8,7 +8,7 @@ from train import Train
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=1e-3,
+parser.add_argument('--lr', type=float, default=5e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
@@ -40,7 +40,7 @@ parser.add_argument('--gamma-m', type=float, default=0.999,
                     help="discount factor manager")
 parser.add_argument('--alpha', type=float, default=0.5,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=.95,
+parser.add_argument('--eps', type=float, default=.75,
                     help='Random Gausian goal for exploration')
 parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM.')
