@@ -30,9 +30,9 @@ class Train:
             self.model.repackage_hidden()
             goals = [g.detach() for g in goals]
             storage = Storage(size=self.args.num_steps,
-                            keys=['r', 'r_i', 'v_w', 'v_m', 'logp', 'entropy',
+                            keys=['r', 'm_r', 'r_i', 'v_w', 'v_m', 'logp', 'entropy',
                                     's_goal_cos', 'mask', 'ret_w', 'ret_m',
-                                    'adv_m', 'adv_w'])
+                                    'adv_m', 'adv_w', 'goal_entropy'])
 
             for _ in range(self.num_steps):
                 action_dist, goals, states, value_m, value_w = self.model(x, goals, states, masks[-1])
@@ -48,15 +48,17 @@ class Train:
 
                 storage.add({
                     'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
+                    'm_r': torch.FloatTensor(info['original_reward']).unsqueeze(-1).to(self.device) / 10,
                     'r_i': self.model.intrinsic_reward(states, goals, masks),
                     'v_w': value_w,
                     'v_m': value_m,
                     'logp': logp.unsqueeze(-1),
                     'entropy': entropy.unsqueeze(-1),
                     's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
+                    'goal_entropy' :self.model.goal_entropy(goals, masks),
                     'm': mask
                 })
-                if step % 1280 == 0 and eps > self.args.decay_limit and step > 1e6:
+                if step % 640 == 0 and eps > self.args.decay_limit:
                     # reduce random exploration
                     eps *= self.args.decay
                     self.model.eps_decay()
@@ -67,7 +69,7 @@ class Train:
                 next_v_m = next_v_m.detach()
                 next_v_w = next_v_w.detach()
             self.optimizer.zero_grad()
-            loss, loss_dict = feudal_loss(storage, next_v_m, next_v_w, self.args)
+            loss, loss_dict = feudal_loss(storage, next_v_m, next_v_w, self.args, step)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.grad_clip)
             self.optimizer.step()
@@ -146,7 +148,7 @@ class Train:
 
                 step += self.args.num_workers
 
-                if step % 1280 == 0 and eps > self.args.decay_limit and step > 1e6:
+                if step % 640 == 0 and eps > self.args.decay_limit:
                     # reduce random exploration
                     eps *= self.args.decay
                     self.model.eps_decay()

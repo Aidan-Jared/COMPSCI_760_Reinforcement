@@ -72,6 +72,9 @@ class FeudalTransformer(nn.Module):
     def state_goal_cosine(self, states, goals, masks):
         return self.manager.state_goal_cosine(states, goals, masks)
     
+    def goal_entropy(self, goals, masks):
+        return self.manager.goal_entropy(goals, masks)
+    
     def repackage_hidden(self):
         def repackage_rnn(x):
             return[item.detach() for item in x]
@@ -139,7 +142,7 @@ class GattedTransformerEncoderLayer(nn.Module):
     def __init__(self, d, nhead, dropout = .1):
         super().__init__()
         self.d = d
-        self.self_attn = nn.MultiheadAttention(embed_dim=self.d, num_heads=nhead, dropout=dropout)
+        self.self_attn = nn.MultiheadAttention(embed_dim=self.d // 2, num_heads=nhead, dropout=dropout)
         self.linear1 = nn.Linear(self.d, self.d)
         self.linear2 = nn.Linear(self.d, self.d)
         self.dropout1 = nn.Dropout(dropout)
@@ -311,7 +314,7 @@ class ManagerTransformer(nn.Module):
         
         goal = F.normalize(goal_raw, dim=-1, eps=1e-6)
         
-        value_est = self.critic(goal_hat)
+        value_est = self.critic(goal_raw)
         value_est = torch.clamp(value_est, -50, 50)
         # goal_hat = self.fc(goal_hat[-1])
         
@@ -335,6 +338,27 @@ class ManagerTransformer(nn.Module):
         # # full_look = torch.sum(mask, dim=0) / 30 
         # # full_look[full_look < 1]  /= 1
         # return cos_d #* full_look.to(self.device)
+    
+    def goal_entropy(self,goals, masks):
+        t = self.c
+        current_goal = goals[self.c]
+        mask = torch.stack(masks[t: t+ self.c]).prod(dim=0).squeeze(-1)
+
+        masked_goal = current_goal[mask.bool()]
+        
+        similarities = torch.mm(masked_goal, masked_goal.t())
+
+        distances = 1 - similarities
+
+        distances = distances[~torch.eye(distances.shape[0], dtype=torch.bool, device=self.device)]
+
+
+        mean_distance = distances.mean()
+        var_distance = distances.var() + 1e-6
+
+        entropy = 0.5 * torch.log(2 * torch.pi * var_distance) + mean_distance
+
+        return entropy
 
 
 if __name__ == "__main__":
