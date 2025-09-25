@@ -72,7 +72,7 @@ def experiment(args):
     print(f"Using Cuda Device: {device}")
     args.device = device
     torch.manual_seed(args.seed)
-    rnd_model = RNDModel(device=device)
+    rnd_model = RNDModel(device=device) # a seperate model to encourage exploration, less seen states give higher rewards, as states are more common, reduce the reward
     if torch.cuda.is_available() and args.cuda:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False

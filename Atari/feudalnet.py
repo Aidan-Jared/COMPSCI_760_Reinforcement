@@ -94,9 +94,9 @@ class Perception(nn.Module):
             self.percept = nn.Sequential(
                 nn.Linear(input_dim[-1], 64),
                 nn.LayerNorm(64),
-                nn.ReLU(),
+                nn.LeakyReLU(.01),
                 nn.Linear(64, d),
-                nn.ReLU())
+                nn.LeakyReLU(.01),)
         else:
             w1 = (input_dim[0] - 8) / 4 + 1
             h1 = (input_dim[1] - 8) / 4 + 1
@@ -250,7 +250,7 @@ class Preprocessor:
             
             return torch.FloatTensor(x_normalized).to(self.device)
         else:
-            return torch.FloatTensor(x).to(self.device)
+            return torch.FloatTensor(x).to(self.device) / 255
 
 class Qlearn(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):

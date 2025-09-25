@@ -298,11 +298,12 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
             modified_reward += .1
             self.score_best = self.total_reward
 
-        obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
-        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
+        if self.episode > 5:
+            obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+            r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
         # r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
 
-        modified_reward += self.alpha * r_i[0]
+            modified_reward += self.alpha * r_i[0]
 
 
         self.prev_score = current_score

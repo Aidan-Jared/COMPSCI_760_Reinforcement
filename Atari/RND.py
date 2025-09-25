@@ -11,7 +11,7 @@ class RNDModel(nn.Module):
         # Frozen random target net
         self.target = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(.01),
             nn.Linear(hidden_dim, output_dim)
         ).to(device)
         for p in self.target.parameters():
@@ -20,7 +20,7 @@ class RNDModel(nn.Module):
         # Trainable predictor net
         self.predictor = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(.01),
             nn.Linear(hidden_dim, output_dim)
         ).to(device)
 
