@@ -5,3 +5,4 @@
 **/logs/
 **/models/
 **/model_data/
+.pyc
