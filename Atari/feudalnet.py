@@ -342,6 +342,7 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
 
     storage.placeholder()  # Fill ret_m, ret_w with empty vals
     for i in reversed(range(args.num_steps)):
+        # calculate R = sum(r_i + sum(gamma * R_i-1))
         ret_m = storage.m_r[i] + args.gamma_m * ret_m * storage.m[i]
         ret_w = storage.r[i] + args.gamma_w * ret_w * storage.m[i]
         storage.ret_m[i] = ret_m
@@ -351,15 +352,17 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
     storage.normalize(['ret_w', 'ret_m'])
 
     rewards_intrinsic, value_m, value_w, ret_w, ret_m, logps, entropy, \
-        state_goal_cosines, goal_entropy= storage.stack(
+        state_goal_cosines, goal_entropy = storage.stack(
             ['r_i', 'v_m', 'v_w', 'ret_w', 'ret_m',
              'logp', 'entropy', 's_goal_cos', 'goal_entropy'])
 
     # Calculate advantages, size B x T
     scale = scale = .1 + (1.0 - .1) * min(1.0, step/warmup)
     r_i = (rewards_intrinsic - rewards_intrinsic.mean() / (rewards_intrinsic.std() + 1e-8)) * scale
+    
+    # whant to get closer to 0
     advantage_w = (ret_w + args.alpha * r_i) - value_w
-    advantage_m = ret_m - value_m
+    advantage_m = ret_m - value_m 
 
     loss_worker = (logps * advantage_w.detach()).mean()
     loss_manager = -(state_goal_cosines * advantage_m.detach()).mean()
@@ -368,6 +371,7 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
     value_w_loss = 0.5 * advantage_w.pow(2).mean()
     value_m_loss = 0.25 * advantage_m.pow(2).mean()
 
+    # want to get larger, how different the actions are and goals are.
     entropy = entropy.mean()
     goal_entropy = goal_entropy.mean()
 

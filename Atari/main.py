@@ -5,6 +5,7 @@ from feudalnet import FeudalNetwork, Qlearn, feudal_loss
 from feudaltransformer import FeudalTransformer
 import gymnasium as gym
 from train import Train
+from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
@@ -71,11 +72,12 @@ def experiment(args):
     print(f"Using Cuda Device: {device}")
     args.device = device
     torch.manual_seed(args.seed)
+    rnd_model = RNDModel(device=device)
     if torch.cuda.is_available() and args.cuda:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     
-    envs = make_envs(args.env_name, args.num_workers, args)
+    envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model)
     if args.model == 'feudal':
         feudalnet = FeudalNetwork(
             num_workers=args.num_workers,
@@ -89,7 +91,7 @@ def experiment(args):
             mlp=args.mlp,
             args=args)
         optimizer = torch.optim.RMSprop([
-            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 1.5},
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 2},
             {'params': feudalnet.worker.parameters(), 'lr': args.lr},
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
@@ -107,8 +109,8 @@ def experiment(args):
             args=args)
         
         optimizer = torch.optim.RMSprop([
-            {'params': feudalnet.manager.parameters(), 'lr': args.lr},
-            {'params': feudalnet.worker.parameters(), 'lr': args.lr*1.5},
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 2},
+            {'params': feudalnet.worker.parameters(), 'lr': args.lr},
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
     else:
@@ -121,7 +123,7 @@ def experiment(args):
         )
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     
-    train = Train(args, feudalnet, optimizer, envs, logger)
+    train = Train(args, feudalnet, optimizer, envs, logger, rnd_model)
     
     print(f"Using model {args.model}")
     if args.model == 'feudal':
