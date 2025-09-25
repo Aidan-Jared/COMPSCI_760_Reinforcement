@@ -250,7 +250,7 @@ class Preprocessor:
             
             return torch.FloatTensor(x_normalized).to(self.device)
         else:
-            return torch.FloatTensor(x).to(self.device) / 255
+            return torch.FloatTensor(x).to(self.device)
 
 class Qlearn(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):

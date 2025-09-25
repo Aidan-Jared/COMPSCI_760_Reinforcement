@@ -13,7 +13,7 @@ parser.add_argument('--lr', type=float, default=2.5e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=8,
+parser.add_argument('--num-workers', type=int, default=16,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=200,
                     help='number of steps the agent takes before updating')
