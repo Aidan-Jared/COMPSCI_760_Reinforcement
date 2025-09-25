@@ -21,6 +21,7 @@ class Train:
         self.args = args
         self.rnd = rnd
         self.rnd_optimizer = torch.optim.Adam(self.rnd.parameters(), 1e-3)
+        self.lr_scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizer, 1, .1, 1e4)
 
     def train_feudal(self):
         eps = self.args.eps
@@ -51,7 +52,7 @@ class Train:
 
                 storage.add({
                     'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
-                    'm_r': torch.FloatTensor(info['original_reward']).unsqueeze(-1).to(self.device) / 10,
+                    'm_r': torch.FloatTensor(info['original_reward']).unsqueeze(-1).to(self.device) / 100,
                     'r_i': self.model.intrinsic_reward(states, goals, masks),
                     'v_w': value_w,
                     'v_m': value_m,
@@ -83,6 +84,8 @@ class Train:
             # update model with gradient clipping
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.grad_clip)
             self.optimizer.step()
+
+            self.lr_scheduler.step()
 
 
             obs_batch = torch.stack(storage.obs)

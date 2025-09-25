@@ -167,7 +167,7 @@ class Reward:
 
 
 class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
-    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=.01, death_penalty=5, pellet_bonus=.1, stagnation_penalty_enable = True):
+    def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.01, death_penalty=20, pellet_bonus=.1, stagnation_penalty_enable = True):
         super().__init__(env)
         if stagnation_penalty_enable:
             StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=750, stagnation_threshold=.75, penalty_escalation=1.2)
@@ -299,11 +299,13 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
             self.score_best = self.total_reward
 
         if self.episode > 5:
-            obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
-            r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
-        # r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
+            last_N = [current_position == self.position_history[i] if len(self.position_history) > 10 else False for i in range(-10,0)]
+            if sum(last_N) == 0:
+                beta = max(1, 1000 / self.episode) * .01
+                obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+                r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
 
-            modified_reward += self.alpha * r_i[0]
+                modified_reward += self.alpha * r_i.item() *  beta
 
 
         self.prev_score = current_score

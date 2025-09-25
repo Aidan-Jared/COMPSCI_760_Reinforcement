@@ -9,13 +9,13 @@ from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=2.5e-3,
+parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
 parser.add_argument('--num-workers', type=int, default=16,
                     help='number of parallel environments to run')
-parser.add_argument('--num-steps', type=int, default=200,
+parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
 parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
@@ -91,7 +91,7 @@ def experiment(args):
             mlp=args.mlp,
             args=args)
         optimizer = torch.optim.RMSprop([
-            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 2},
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 3},
             {'params': feudalnet.worker.parameters(), 'lr': args.lr},
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
