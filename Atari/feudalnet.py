@@ -387,5 +387,4 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
                   'worker/advantage': advantage_w.mean().item(),
                   'worker/intrinsic_reward': rewards_intrinsic.mean().item(),
                   'manager/cosines': state_goal_cosines.mean().item(),
-                  'manager/advantage': advantage_m.mean().item(),
-                  'manager/entropy': goal_entropy.item()}
+                  'manager/advantage': advantage_m.mean().item()}

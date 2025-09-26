@@ -11,6 +11,7 @@ from feudalnet import feudal_loss
 from collections import deque
 
 
+
 class Train:
     def __init__(self, args, model, optimizer, envs, logger, rnd):
         self.model = model
