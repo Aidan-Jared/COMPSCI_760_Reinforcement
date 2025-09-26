@@ -1,5 +1,7 @@
 **/__pycache__/
 .venv
 .wsl-venv
-/models
-/logs
+models
+logs
+Atari/__pycache__
+.pyc
