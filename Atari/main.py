@@ -5,6 +5,7 @@ from feudalnet import FeudalNetwork, Qlearn, feudal_loss
 from feudaltransformer import FeudalTransformer
 import gymnasium as gym
 from train import Train
+from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
@@ -12,7 +13,7 @@ parser.add_argument('--lr', type=float, default=5e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=64,
+parser.add_argument('--num-workers', type=int, default=16,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
@@ -22,13 +23,13 @@ parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
 parser.add_argument('--grad-clip', type=float, default=5.,
                     help='Gradient clipping (recommended).')
-parser.add_argument('--entropy-coef', type=float, default=0.01,
+parser.add_argument('--entropy-coef', type=float, default=0.05,
                     help='Entropy coefficient to encourage exploration.')
 parser.add_argument('--mlp', type=int, default=1,
                     help='toggle to feedforward ML architecture')
 
 # SPECIFIC FEUDALNET PARAMETERS
-parser.add_argument('--time-horizon', type=int, default=30,
+parser.add_argument('--time-horizon', type=int, default=100,
                     help='Manager horizon (c)')
 parser.add_argument('--hidden-dim-manager', type=int, default=128,
                     help='Hidden dim (d)')
@@ -40,11 +41,11 @@ parser.add_argument('--gamma-m', type=float, default=0.999,
                     help="discount factor manager")
 parser.add_argument('--alpha', type=float, default=0.5,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=.75,
+parser.add_argument('--eps', type=float, default=.80,
                     help='Random Gausian goal for exploration')
-parser.add_argument('--dilation', type=int, default=10,
+parser.add_argument('--dilation', type=int, default=20,
                     help='Dilation parameter for manager LSTM.')
-parser.add_argument('--decay', type=float, default=.999,
+parser.add_argument('--decay', type=float, default=.9995,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
@@ -54,7 +55,7 @@ parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
                     default='feudal', help="which model to train")
-parser.add_argument('--decay-limit', type=float, default=1e-3,
+parser.add_argument('--decay-limit', type=float, default=5e-2,
                     help='how much eps decays')
 
 # QLEARN SPECIFIC PARAMETERS
@@ -71,11 +72,12 @@ def experiment(args):
     print(f"Using Cuda Device: {device}")
     args.device = device
     torch.manual_seed(args.seed)
+    rnd_model = RNDModel(device=device) # a seperate model to encourage exploration, less seen states give higher rewards, as states are more common, reduce the reward
     if torch.cuda.is_available() and args.cuda:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     
-    envs = make_envs(args.env_name, args.num_workers, args)
+    envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model)
     if args.model == 'feudal':
         feudalnet = FeudalNetwork(
             num_workers=args.num_workers,
@@ -88,7 +90,11 @@ def experiment(args):
             device=device,
             mlp=args.mlp,
             args=args)
-        optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
+        optimizer = torch.optim.RMSprop([
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 3},
+            {'params': feudalnet.worker.parameters(), 'lr': args.lr},
+            {'params': feudalnet.perception.parameters(), 'lr': args.lr},
+        ], lr= args.lr, alpha=.99, eps=1e-5)
     elif args.model =='feudalTransformer':
         feudalnet = FeudalTransformer(
             num_workers=args.num_workers,
@@ -103,8 +109,8 @@ def experiment(args):
             args=args)
         
         optimizer = torch.optim.RMSprop([
-            {'params': feudalnet.manager.parameters(), 'lr': args.lr},
-            {'params': feudalnet.worker.parameters(), 'lr': args.lr*1.5},
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 2},
+            {'params': feudalnet.worker.parameters(), 'lr': args.lr},
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
     else:
@@ -117,7 +123,7 @@ def experiment(args):
         )
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     
-    train = Train(args, feudalnet, optimizer, envs, logger)
+    train = Train(args, feudalnet, optimizer, envs, logger, rnd_model)
     
     print(f"Using model {args.model}")
     if args.model == 'feudal':
