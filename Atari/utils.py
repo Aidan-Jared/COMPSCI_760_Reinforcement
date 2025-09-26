@@ -100,90 +100,19 @@ class Storage:
         data = [getattr(self, k)[:self.size] for k in keys]
         return map(lambda x: torch.stack(x, dim=0), data)
 
-class StagnationPenalty:
-    def __init__(self, stagnation_pen = .0001, position_history_size = 1000, stagnation_threshold = .8, penalty_escalation = 1.2, max_mult = 40, delay=65):
-        self.stagnation_pen = stagnation_pen
-        self.position_history_size = position_history_size
-        self.stagnation_threshold = stagnation_threshold
-        self.penalty_escalation = penalty_escalation
-        self.max_multi = max_mult
-        self.delay = delay
-        self.delay_counter = 0
-        
-        self.position_history = deque(maxlen=self.position_history_size)
-        self.counter = 0
-        self.current_multi = 1.0
-
-    def calculate_stagnation_penalty(self, current_position):
-        if current_position is None or self.delay_counter < self.delay:
-            self.delay_counter += 1
-            return 0.0
-        
-        self.position_history.append(current_position)
-
-        if len(self.position_history) < self.position_history_size // 2:
-            return 0.0
-        
-        unique_positions = len(set(self.position_history))
-        diversity_ratio = unique_positions / len(self.position_history)
-
-
-        penalty = 0
-
-        if diversity_ratio < self.stagnation_threshold:
-            self.current_multi *= self.penalty_escalation
-
-            penalty = self.stagnation_pen * min(self.max_multi, self.current_multi)
-
-        else:
-            self.counter = max(0, self.counter-5)
-            self.current_multi = max(1, self. current_multi / self.penalty_escalation)
-        self.delay_counter += 1
-
-        return penalty
-    
-    def reset_stagnation_tracking(self):
-        self.position_history.clear()
-        self.counter = 0
-        self.current_multi = 1
-
-class Reward:
-    def _init__(self, gamma = .99):
-        self.prev_reward = 0
-        self.gamma = gamma
-    
-    def maximum_reward(self, score):
-        if score > 0:
-            reward = max(score, self.gamma * self.prev_reward)
-        else:
-            reward = min(score, self.gamma * self.prev_reward)
-        self.prev_reward = reward
-        return reward
-    
-    def diff_reward(self, score):
-        reward = abs(score - self.gamma * self.prev_reward)
-        self.prev_reward = reward
-        return reward
-
-
-class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
+class PacmanRewardWrapper(gym.Wrapper):
     def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.01, death_penalty=20, pellet_bonus=.1, stagnation_penalty_enable = True):
         super().__init__(env)
-        if stagnation_penalty_enable:
-            StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=750, stagnation_threshold=.75, penalty_escalation=1.2)
 
         self.pellet_bonus = pellet_bonus
         self.death_penalty = death_penalty
         self.stagnation_penalty_enable = stagnation_penalty_enable
         self.ram = self._check_ram_observation()
         self.lives = 0
-        self.pellet_history = deque(maxlen=1000)
 
         self.prev_score = 0
         self.total_reward = 0
         self.prev_positon = None
-        self.corridor_history = deque(maxlen=300)
-        self.courner_time_counter = 0
         self.score_best = 0
         self.episode = -1
         self.position_history = deque(maxlen=300)
@@ -201,17 +130,12 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
         self.prev_score = 0
-        self.pellet_history = deque(maxlen=1000)
         self.episode +=1
         self.prev_positon = self._get_position(obs)
-        self.corridor_history.clear()
         self.lives = info['lives']
-        self.courner_time_counter = 0
         self.total_reward = 0
         self.delay_counter = 0
         self.position_history = deque(maxlen=300)
-        if self.stagnation_penalty_enable:
-            self.reset_stagnation_tracking()
         
         return obs, info
     
@@ -222,39 +146,21 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
         current_position = self._get_position(obs)
         stagnate = True
 
-        # current_score = self._get_score(obs, info)
-
         modified_reward = reward / 100
-        # self.pellet_history.append(current_score)
         if reward == 10:
-        #     unique = len(set(self.pellet_history))
-        #     pellet_bonus = unique / len(self.pellet_history) + self.pellet_bonus
-            # score_increase = current_score - self.prev_score
-            modified_reward += self.pellet_bonus #* score_increase)
-
-        #     self.prev_score = current_score
-        #     self.prev_positon = current_position
-
-        #     info.update({
-        #         'total_reward': self.total_reward,
-        #         'original_reward': reward,
-        #         'modified_reward': modified_reward,
-        #         'position': current_position,
-        #         'score': current_score,
-        #         'using_ram': self.ram
-        #     })
-        #     return obs, modified_reward, terminated, truncated, info
+            # reward pellet collection
+            modified_reward += self.pellet_bonus
 
         if current_position not in self.position_history:
+            # Reward new positions
             self.position_history.append(current_position)
             modified_reward += .1
             stagnate = False
 
         stagnation_penalty = 0
-        # corner_penalty = 0
-        # corridor_penalty = 0
 
         if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
+            # penalty for not moving around
             position_count = self.position_history.count(current_position)
             if position_count < 25:
                 stagnation_penalty = 0
@@ -262,43 +168,29 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
                 position_len = len(self.position_history)
                 position_count /= position_len
                 stagnation_penalty = position_count * .1
-            # if len(self.position_history) == 500 and self.position_history[-1] != current_position:
-            #     self.position_history = self.position_history[-100:]
-            # stagnation_penalty = self.calculate_stagnation_penalty(current_position)
+    
             modified_reward -= stagnation_penalty
             self.position_history.append(current_position)
 
-            # if self._is_corner_positon(current_position,  obs):
-            #     self.courner_time_counter += 1
-            #     if self.courner_time_counter > 20:
-            #         corner_penalty = .2 #* (self.courner_time_counter)
-            #         modified_reward -= corner_penalty
-            # else:
-            #     self.courner_time_counter = max(0,  self.courner_time_counter - 2)
-            
-            # self.corridor_history.append(current_position)
-            # if len(self.corridor_history) >= 20:
-            #     if self._detect_corridor_oscillation():
-            #         corridor_penalty = .01
-            #         modified_reward -= corridor_penalty 
-            #         # if self.alive > 0:
-            #             # self.alive -= corridor_penalty
         if info['lives'] < self.lives :
-                # self.alive = 0
+            # penalty for death
             self.delay_counter = 0
-            death_penalty =  self.death_penalty# min(5, .01 * info['episode_frame_number'])
+            death_penalty =  self.death_penalty
             modified_reward -= death_penalty
             self.lives = info['lives']
             if self.lives == 0:
                 modified_reward -= self.death_penalty * 2/5
 
         modified_reward += min(.1, 0.001 + 1e-4 * self.total_reward) 
+        # alive reward
         
         if self.score_best < self.total_reward:
+            # reward for new high score
             modified_reward += .1
             self.score_best = self.total_reward
 
         if self.episode > 5:
+            # reward for new states
             last_N = [current_position == self.position_history[i] if len(self.position_history) > 10 else False for i in range(-10,0)]
             if sum(last_N) == 0:
                 beta = max(1, 1000 / self.episode) * .01
@@ -311,7 +203,6 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
         self.prev_score = current_score
         self.prev_positon = current_position
 
-        # modified_reward = self.maximum_reward(modified_reward)
 
         info.update({
             'total_reward': self.total_reward,
@@ -349,39 +240,7 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
               return obs[120] * 256 + obs[121]
             except IndexError:
                 return 0  
-    
-    def _is_corner_positon(self, position, obs):
-        if not position:
-            return False
-        
-        x, y = position
-
-        if self.ram:
-            return (x < 20 or x > 140 or y < 20 or y > 180)
-        else:
-            # For pixel version, check screen boundaries
-            obs_height, obs_width = obs.shape[:2] if len(obs.shape) >= 2 else (210, 160)
-            return (x < obs_width * 0.1 or x > obs_width * 0.9 or 
-                   y < obs_height * 0.1 or y > obs_height * 0.9)
-        
-    def _detect_corridor_oscillation(self):
-        if len(self.corridor_history) < 10:
-            return False
-
-        positions = list(self.corridor_history)[-10:]
-        positions = [p for p in positions if p is not None]
-
-        if len(positions) < 6:
-            return False
-        
-        x_coords = [float(pos[0]) for pos in positions]
-        y_coords = [float(pos[1]) for pos in positions]
-        
-        x_changes = sum(1 for i in range(1, len(x_coords)) if abs(x_coords[i] - x_coords[i-1]) > 5)
-        y_changes = sum(1 for i in range(1, len(y_coords)) if abs(y_coords[i] - y_coords[i-1]) > 5)
-
-        return (x_changes > 10 or y_changes > 10)
-    
+            
     def _detect_pacman_position_pixel(self, obs):
         """Detect Ms. Pacman position from pixels"""
         if len(obs.shape) == 3:  # RGB
