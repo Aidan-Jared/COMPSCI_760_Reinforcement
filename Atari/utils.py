@@ -81,10 +81,11 @@ class Storage:
             getattr(self,k).append(v)
     
     def placeholder(self):
+        size = len(getattr(self, self.keys[0]))
         for k in self.keys:
             v = getattr(self, k)
             if len(v) == 0:
-                setattr(self, k, [None] * self.size)
+                setattr(self, k, [None] * size)
     
     def reset(self):
         for key in self.keys:
@@ -97,11 +98,12 @@ class Storage:
             setattr(self, key, [i for i in k])
     
     def stack(self, keys):
-        data = [getattr(self, k)[:self.size] for k in keys]
+        size = len(getattr(self, self.keys[0]))
+        data = [getattr(self, k)[:size] for k in keys]
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.01, death_penalty=20, pellet_bonus=.1, stagnation_penalty_enable = True):
+    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=.01, death_penalty=2, pellet_bonus=.1, stagnation_penalty_enable = True):
         super().__init__(env)
 
         self.pellet_bonus = pellet_bonus
@@ -116,6 +118,7 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.score_best = 0
         self.episode = -1
         self.position_history = deque(maxlen=300)
+        self.new_best = False
 
         self.rnd_model = rnd_model
         self.alpha = alpha
@@ -136,6 +139,7 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.total_reward = 0
         self.delay_counter = 0
         self.position_history = deque(maxlen=300)
+        self.new_best = False
         
         return obs, info
     
@@ -153,9 +157,9 @@ class PacmanRewardWrapper(gym.Wrapper):
 
         if current_position not in self.position_history:
             # Reward new positions
-            self.position_history.append(current_position)
-            modified_reward += .1
+            modified_reward += .05
             stagnate = False
+        self.position_history.append(current_position)
 
         stagnation_penalty = 0
 
@@ -180,24 +184,23 @@ class PacmanRewardWrapper(gym.Wrapper):
             self.lives = info['lives']
             if self.lives == 0:
                 modified_reward -= self.death_penalty * 2/5
-
-        modified_reward += min(.1, 0.001 + 1e-4 * self.total_reward) 
-        # alive reward
+        else:
+            modified_reward += .01
+            # alive reward
         
         if self.score_best < self.total_reward:
             # reward for new high score
-            modified_reward += .1
+            if not self.new_best:
+                modified_reward += .3
             self.score_best = self.total_reward
+            self.new_best = True
 
         if self.episode > 5:
             # reward for new states
-            last_N = [current_position == self.position_history[i] if len(self.position_history) > 10 else False for i in range(-10,0)]
-            if sum(last_N) == 0:
-                beta = max(1, 1000 / self.episode) * .01
-                obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
-                r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
+            obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+            r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
 
-                modified_reward += self.alpha * r_i.item() *  beta
+            modified_reward += self.alpha * r_i.item()
 
 
         self.prev_score = current_score
@@ -274,7 +277,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.total_reward = 0
         self.lives = 0
         self.position_history = deque(maxlen=500)
-        self.rnd_model = rnd_model
+        # self.rnd_model = rnd_model
         self.device = rnd_model.device
 
         self.alpha = alpha
@@ -323,11 +326,11 @@ class MontezumaRewardWrapper(gym.Wrapper):
             modified_reward -= self.death_penalty
         self.lives = lives
 
-        obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device)
-        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detatch().cpu().numpy()[0]
-        r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
+        # obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device)
+        # r_i = self.rnd_model.intrinsic_reward(obs_tensor).detatch().cpu().numpy()[0]
+        # r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
 
-        modified_reward += self.alpha * r_i
+        # modified_reward += self.alpha * r_i
 
         self.total_reward += reward
         info.update({
@@ -379,7 +382,7 @@ class VectorEnvVisualizer:
         self.best_reward = 0
         self.best_rewards_x = []
         self.best_reward_y = []
-        
+
         if save_videos:
             os.makedirs(save_dir, exist_ok=True)
         
@@ -505,9 +508,9 @@ class VectorEnvVisualizer:
 
             self.ax4.clear()
             self.ax4.scatter(self.best_rewards_x, self.best_reward_y)
-            self.ax4.set_title('Best IQM across time')
+            self.ax4.set_title('IQM across time')
             self.ax4.set_xlabel('step')
-            self.ax4.set_ylabel('best IQM')
+            self.ax4.set_ylabel('IQM')
 
 
             self.ax5.clear()
@@ -575,5 +578,6 @@ def take_action(a, eps):
         action = torch.argmax(a, dim=-1)
     logp = dist.log_prob(action)
     entropy = dist.entropy()
+    
     return action.cpu().detach().numpy(), logp, entropy
         

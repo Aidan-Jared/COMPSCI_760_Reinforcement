@@ -54,7 +54,9 @@ class RNDModel(nn.Module):
 
         if normalize:
             self.update_rms(loss.detach())
-            std = self.running_var.sqrt() + 1e-8
-            return (loss - self.running_mean.to(self.device)) / std.to(self.device)
+            std = torch.clamp(self.running_var.sqrt(), min = 1.).to(self.device)
+            mean = self.running_mean.to(self.device)
+            normalized = (loss - mean) / std
+            return torch.clamp(normalized, 0, 1)
         else:
-            return loss
+            return torch.clamp(loss / 10, 0, 1)

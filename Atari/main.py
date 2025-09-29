@@ -1,7 +1,7 @@
 import argparse
 import torch
 from utils import make_envs, take_action, Logger, Storage, VectorEnvVisualizer
-from feudalnet import FeudalNetwork, Qlearn, feudal_loss
+from feudalnet import FeudalNetwork, Qlearn
 from feudaltransformer import FeudalTransformer
 import gymnasium as gym
 from train import Train
@@ -13,7 +13,7 @@ parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=16,
+parser.add_argument('--num-workers', type=int, default=32,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
@@ -23,7 +23,7 @@ parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
 parser.add_argument('--grad-clip', type=float, default=5.,
                     help='Gradient clipping (recommended).')
-parser.add_argument('--entropy-coef', type=float, default=0.05,
+parser.add_argument('--entropy-coef', type=float, default=0.01,
                     help='Entropy coefficient to encourage exploration.')
 parser.add_argument('--mlp', type=int, default=1,
                     help='toggle to feedforward ML architecture')
@@ -31,25 +31,25 @@ parser.add_argument('--mlp', type=int, default=1,
 # SPECIFIC FEUDALNET PARAMETERS
 parser.add_argument('--time-horizon', type=int, default=100,
                     help='Manager horizon (c)')
-parser.add_argument('--hidden-dim-manager', type=int, default=128,
+parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
-parser.add_argument('--hidden-dim-worker', type=int, default=16,
+parser.add_argument('--hidden-dim-worker', type=int, default=256,
                     help='Hidden dim for worker (k)')
-parser.add_argument('--gamma-w', type=float, default=0.99,
+parser.add_argument('--gamma-w', type=float, default=0.95,
                     help="discount factor worker")
-parser.add_argument('--gamma-m', type=float, default=0.999,
-                    help="discount factor manager")
-parser.add_argument('--alpha', type=float, default=0.5,
+parser.add_argument('--gamma-m', type=float, default=0.99,
+                    help="discount factor manager"),
+parser.add_argument('--alpha', type=float, default=.5,
                     help='Intrinsic reward coefficient in [0, 1]')
 parser.add_argument('--eps', type=float, default=.80,
                     help='Random Gausian goal for exploration')
-parser.add_argument('--dilation', type=int, default=20,
+parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM.')
 parser.add_argument('--decay', type=float, default=.9995,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalv3',
+parser.add_argument('--run-name', type=str, default='feudalv4',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
@@ -62,6 +62,8 @@ parser.add_argument('--decay-limit', type=float, default=5e-2,
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor for Q-learning')
 parser.add_argument('--target-update', type=int, default=10000, help='steps between target syncs')
 parser.add_argument('--eps-decay-freq', type=int, default=1280, help='steps between epsilon decays')
+
+parser.add_argument('--maximal', type=bool, default=False, help='use maximal reward')
 
 args = parser.parse_args()
 
@@ -91,7 +93,7 @@ def experiment(args):
             mlp=args.mlp,
             args=args)
         optimizer = torch.optim.RMSprop([
-            {'params': feudalnet.manager.parameters(), 'lr': args.lr / 3},
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr * .7},
             {'params': feudalnet.worker.parameters(), 'lr': args.lr},
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)

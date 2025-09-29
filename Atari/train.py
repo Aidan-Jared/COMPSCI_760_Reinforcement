@@ -21,7 +21,11 @@ class Train:
         self.args = args
         self.rnd = rnd
         self.rnd_optimizer = torch.optim.Adam(self.rnd.parameters(), 1e-3)
-        self.lr_scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizer, 1, .1, 1e4)
+        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(
+                                                    self.optimizer,
+                                                    step_size=1e6,  # Decay every 5000 updates
+                                                    gamma=0.9
+                                                )
 
     def train_feudal(self):
         eps = self.args.eps
@@ -34,9 +38,9 @@ class Train:
             self.model.repackage_hidden()
             goals = [g.detach() for g in goals]
             storage = Storage(size=self.args.num_steps,
-                            keys=['r', 'm_r', 'r_i', 'v_w', 'v_m', 'logp', 'entropy',
+                            keys=['r', 'm_r', 'r_i', 'r_t', 'v_w', 'v_m', 'logp', 'entropy',
                                     's_goal_cos', 'mask', 'ret_w', 'ret_m',
-                                    'adv_m', 'adv_w', 'goal_entropy', 'obs'])
+                                    'adv_m', 'adv_w', 'goal_entropy', 'obs', 'goal_q'])
 
             for _ in range(self.num_steps):
                 action_dist, goals, states, value_m, value_w = self.model(x, goals, states, masks[-1])
@@ -52,7 +56,8 @@ class Train:
 
                 storage.add({
                     'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
-                    'm_r': torch.FloatTensor(info['original_reward']).unsqueeze(-1).to(self.device) / 100,
+                    'm_r': torch.FloatTensor(info['original_reward']).unsqueeze(-1).to(self.device),
+                    'r_t': torch.FloatTensor(info['total_reward']).unsqueeze(-1).to(self.device),
                     'r_i': self.model.intrinsic_reward(states, goals, masks),
                     'v_w': value_w,
                     'v_m': value_m,
@@ -61,16 +66,12 @@ class Train:
                     's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
                     'goal_entropy' :self.model.goal_entropy(goals, masks),
                     'm': mask,
-                    'obs': torch.Tensor(x).to(self.device)
+                    'obs': torch.Tensor(x).to(self.device),
+                    'goal_q': self.model.goal_quality(states, goals, masks)
                 })
 
-
-                if step % 640 == 0 and eps > self.args.decay_limit:
-                    # reduce random exploration
-                    eps *= self.args.decay
-                    self.model.eps_decay()
-
                 step += self.num_workers
+
             with torch.no_grad():
                 # predict the reward of the next step
                 *_, next_v_m, next_v_w = self.model(x, goals, states, mask, save = False)
@@ -97,6 +98,11 @@ class Train:
             self.rnd_optimizer.zero_grad()
             rnd_loss.backward()
             self.rnd_optimizer.step()
+
+            if eps > self.args.decay_limit:
+                # reduce random exploration
+                eps *= self.args.decay
+                self.model.eps_decay()
 
             self.logger.log_scalars(loss_dict, step)
             if len(save_steps) > 0 and step > save_steps[0]:
