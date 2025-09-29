@@ -143,7 +143,7 @@ class Manager(nn.Module):
         state = F.relu(self.Mspace(z))
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
-        value_est = F.softplus(self.critic(torch.cat([goal_hat, state], dim=-1)))
+        value_est = self.critic(torch.cat([goal_hat, state], dim=-1))
 
         # scale_factor = torch.tanh(self.scale_factor(goal_hat))
 
@@ -373,7 +373,7 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
             ])
             ret_m =torch.logsumexp(returns_canidates, dim=0)
         else:
-            ret_m = (storage.m_r[i] / 100) + args.gamma_m * (ret_m) * storage.m[i]
+            ret_m = (storage.r[i]) + args.gamma_m * (ret_m) * storage.m[i]
         
             
         ret_w = storage.r[i] + args.gamma_w * ret_w * storage.m[i]

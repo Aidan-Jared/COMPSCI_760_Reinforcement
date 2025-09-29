@@ -195,7 +195,7 @@ class PacmanRewardWrapper(gym.Wrapper):
             self.score_best = self.total_reward
             self.new_best = True
 
-        if self.episode > 5:
+        if self.episode > 50:
             # reward for new states
             obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
             r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
