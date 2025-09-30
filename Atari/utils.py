@@ -64,7 +64,6 @@ class Logger:
         with open(f'logs/{self.log_name}', 'w') as r:
             json.dump(self.log, r)
 
-
 class Storage:
     def __init__(self, size, keys = None):
         if keys is None:
@@ -103,11 +102,12 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=.01, death_penalty=2, pellet_bonus=.1, stagnation_penalty_enable = True):
+    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=1, death_penalty=10, pellet_bonus=.5, stagnation_penalty_enable = True):
         super().__init__(env)
 
         self.pellet_bonus = pellet_bonus
         self.death_penalty = death_penalty
+        self.stagnation_penalty = stagnation_penalty
         self.stagnation_penalty_enable = stagnation_penalty_enable
         self.ram = self._check_ram_observation()
         self.lives = 0
@@ -118,6 +118,8 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.score_best = 0
         self.episode = -1
         self.position_history = deque(maxlen=300)
+        self.score_history = deque(maxlen=25)
+        self.score_history.append(0)
         self.new_best = False
 
         self.rnd_model = rnd_model
@@ -150,14 +152,19 @@ class PacmanRewardWrapper(gym.Wrapper):
         current_position = self._get_position(obs)
         stagnate = True
 
-        modified_reward = reward / 100
+
+        modified_reward = reward
         if reward == 10:
             # reward pellet collection
             modified_reward += self.pellet_bonus
+        if reward == 100:
+            modified_reward = 10 + 2 * self.pellet_bonus
+        if reward >= 200:
+            modified_reward = 10 + 3 * self.pellet_bonus
 
         if current_position not in self.position_history:
             # Reward new positions
-            modified_reward += .05
+            modified_reward += .2
             stagnate = False
         self.position_history.append(current_position)
 
@@ -166,15 +173,14 @@ class PacmanRewardWrapper(gym.Wrapper):
         if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
             # penalty for not moving around
             position_count = self.position_history.count(current_position)
-            if position_count < 25:
+            if position_count < 10:
                 stagnation_penalty = 0
             else:
-                position_len = len(self.position_history)
-                position_count /= position_len
-                stagnation_penalty = position_count * .1
+                # position_len = len(self.position_history)
+                # position_count /= position_len
+                stagnation_penalty = self.stagnation_penalty
     
             modified_reward -= stagnation_penalty
-            self.position_history.append(current_position)
 
         if info['lives'] < self.lives :
             # penalty for death
@@ -183,24 +189,24 @@ class PacmanRewardWrapper(gym.Wrapper):
             modified_reward -= death_penalty
             self.lives = info['lives']
             if self.lives == 0:
-                modified_reward -= self.death_penalty * 2/5
-        else:
-            modified_reward += .01
+                modified_reward -= self.death_penalty * .5
+                self.score_history.append(self.total_reward)
+        # else:
+        #     modified_reward += .1
             # alive reward
         
-        if self.score_best < self.total_reward:
+        if max(self.score_history) < self.total_reward:
             # reward for new high score
-            if not self.new_best:
-                modified_reward += .3
-            self.score_best = self.total_reward
-            self.new_best = True
+                modified_reward += .01
+                if self.score_best < self.total_reward:
+                    self.score_best = self.total_reward
 
-        if self.episode > 50:
-            # reward for new states
+        if self.episode > 40:
             obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
             r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
 
             modified_reward += self.alpha * r_i.item()
+        
 
 
         self.prev_score = current_score

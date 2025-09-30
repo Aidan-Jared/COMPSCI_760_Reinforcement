@@ -131,9 +131,7 @@ class Manager(nn.Module):
         self.Mspace = nn.Linear(self.d, self.d)
         self.Mrnn = DilatedLSTM(self.d, self.d, self.r)
         self.critic = nn.Sequential(
-            nn.Linear(self.d * 2, self.d),
-            nn.ReLU(),
-            nn.Linear(self.d, self.d //2),
+            nn.Linear(self.d, self.d // 2),
             nn.ReLU(),
             nn.Linear(self.d //2 , 1)
         )
@@ -143,7 +141,7 @@ class Manager(nn.Module):
         state = F.relu(self.Mspace(z))
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
-        value_est = self.critic(torch.cat([goal_hat, state], dim=-1))
+        value_est = self.critic(goal_hat)
 
         # scale_factor = torch.tanh(self.scale_factor(goal_hat))
 
@@ -373,15 +371,15 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
             ])
             ret_m =torch.logsumexp(returns_canidates, dim=0)
         else:
-            ret_m = (storage.r[i]) + args.gamma_m * (ret_m) * storage.m[i]
+            ret_m = (storage.r[i] / 10) + args.gamma_m * (ret_m) * storage.m[i]
         
             
-        ret_w = storage.r[i] + args.gamma_w * ret_w * storage.m[i]
+        ret_w = storage.r[i] / 10 + args.gamma_w * ret_w * storage.m[i]
         storage.ret_m[i] = ret_m
         storage.ret_w[i] = ret_w
 
     # Optionally, normalize the returns
-    storage.normalize(['ret_w'])
+    # storage.normalize(['ret_w'])
 
     rewards_intrinsic, value_m, value_w, ret_w, ret_m, logps, entropy, \
         state_goal_cosines, goal_entropy, goal_q = storage.stack(
@@ -396,18 +394,20 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
 
     advantage_m = ret_m - value_m 
 
-    goal_q = goal_q.mean()
+    goal_q = .3 * goal_q.mean()
     loss_worker = (logps * advantage_w.detach()).mean()
+    negative_cosine_pen = .5 * F.relu(-state_goal_cosines).mean()
+    state_goal_cosines = torch.clamp(state_goal_cosines, min=0)
     loss_manager =  (state_goal_cosines * advantage_m.detach()).mean()
 
     # Update the critics into the right direction
-    value_w_loss = 0.1 * advantage_w.pow(2).mean()
-    value_m_loss = 0.1 * advantage_m.pow(2).mean()
+    value_w_loss = 0.5 * advantage_w.pow(2).mean()
+    value_m_loss = 0.5 * advantage_m.pow(2).mean()
 
     entropy = entropy.mean()
     goal_entropy = goal_entropy.mean()
 
-    loss = - loss_worker - loss_manager + value_w_loss + value_m_loss \
+    loss = - loss_worker - loss_manager + goal_q + negative_cosine_pen + value_w_loss + value_m_loss \
         - (args.entropy_coef * entropy)
 
     return loss, {'loss/total_fun_loss': loss.item(),
