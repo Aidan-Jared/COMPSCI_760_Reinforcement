@@ -374,7 +374,7 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
             ret_m = (storage.r[i] / 10) + args.gamma_m * (ret_m) * storage.m[i]
         
             
-        ret_w = storage.r[i] / 10 + args.gamma_w * ret_w * storage.m[i]
+        ret_w = storage.r[i] /10 + args.gamma_w * ret_w * storage.m[i]
         storage.ret_m[i] = ret_m
         storage.ret_w[i] = ret_w
 
@@ -396,8 +396,8 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
 
     goal_q = .3 * goal_q.mean()
     loss_worker = (logps * advantage_w.detach()).mean()
-    negative_cosine_pen = .5 * F.relu(-state_goal_cosines).mean()
-    state_goal_cosines = torch.clamp(state_goal_cosines, min=0)
+    negative_cosine_pen =  F.relu(-state_goal_cosines).mean()
+    # state_goal_cosines = torch.clamp(state_goal_cosines, min=0)
     loss_manager =  (state_goal_cosines * advantage_m.detach()).mean()
 
     # Update the critics into the right direction
