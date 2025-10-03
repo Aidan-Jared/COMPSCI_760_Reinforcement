@@ -30,7 +30,7 @@ class Train:
     def train_feudal(self):
         eps = self.args.eps
         save_steps =  list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
-        goals, states, masks = self.model.init_obj()
+        goals, states, masks, action = self.model.init_obj()
         x, info = self.envs.reset(seed=self.args.seed)
         step = 0
         visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
@@ -43,8 +43,8 @@ class Train:
                                     'adv_m', 'adv_w', 'goal_entropy', 'obs', 'goal_q'])
 
             for _ in range(self.num_steps):
-                action_dist, goals, states, value_m, value_w = self.model(x, goals, states, masks[-1])
-                action, logp, entropy = take_action(action_dist, eps)
+                action_dist, goals, states, value_m, value_w = self.model(x, goals, states, action, masks[-1])
+                action, logp, entropy = take_action(action_dist, eps, self.args.env_name)
                 x, reward, terminated, truncated, info = self.envs.step(action)
                 if step % 160 == 0:
                     visualizer.capture_frame(self.envs, step, action, reward, terminated, truncated, info)
@@ -53,6 +53,7 @@ class Train:
                 mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(self.device)
                 masks.pop(0)                    
                 masks.append(mask)
+                action = torch.FloatTensor(action).unsqueeze(-1).to(self.device)
 
                 storage.add({
                     'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
@@ -67,14 +68,15 @@ class Train:
                     'goal_entropy' :self.model.goal_entropy(goals, masks),
                     'm': mask,
                     'obs': torch.Tensor(x).to(self.device),
-                    'goal_q': self.model.goal_quality(states, goals, masks)
+                    'goal_q': self.model.goal_quality(states, goals, masks),
+                    'actions': action
                 })
 
                 step += self.num_workers
 
             with torch.no_grad():
                 # predict the reward of the next step
-                *_, next_v_m, next_v_w = self.model(x, goals, states, mask, save = False)
+                *_, next_v_m, next_v_w = self.model(x, goals, states, action, mask, save = False)
                 next_v_m = next_v_m.detach()
                 next_v_w = next_v_w.detach()
 

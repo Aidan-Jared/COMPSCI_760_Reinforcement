@@ -102,7 +102,7 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=1., death_penalty=10, pellet_bonus=1, stagnation_penalty_enable = True):
+    def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.4, death_penalty=4, pellet_bonus=.1, stagnation_penalty_enable = True):
         super().__init__(env)
 
         self.pellet_bonus = pellet_bonus
@@ -117,7 +117,8 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.prev_positon = None
         self.score_best = 0
         self.episode = -1
-        self.position_history = deque(maxlen=300)
+        self.position_history = deque(maxlen=200)
+        self.action_history = deque(maxlen=100)
         self.score_history = deque(maxlen=25)
         self.score_history.append(0)
         self.new_best = False
@@ -140,7 +141,8 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.lives = info['lives']
         self.total_reward = 0
         self.delay_counter = 0
-        self.position_history = deque(maxlen=500)
+        self.position_history = deque(maxlen=200)
+        self.action_history = deque(maxlen=100)
         self.new_best = False
         
         return obs, info
@@ -151,19 +153,20 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.total_reward += reward
         current_position = self._get_position(obs)
         stagnate = True
-        gain = False
 
 
         modified_reward = reward
         if reward == 10:
             # reward pellet collection
-            modified_reward += self.pellet_bonus
+             modified_reward = 1 + min(self.pellet_bonus, info['episode_frame_number']/5000)
         if reward == 100:
-            modified_reward = 10 + 2 * self.pellet_bonus
+            modified_reward = 2
         if reward >= 200:
-            modified_reward = 10 + 3 * self.pellet_bonus
-        if reward != 0:
-            gain = True
+            modified_reward = 2.5
+        # if reward == 100:
+        #     modified_reward = 20 * self.pellet_bonus
+        # if reward >= 200:
+        #     modified_reward = 25 * self.pellet_bonus
 
         if current_position not in self.position_history:
             # Reward new positions
@@ -173,42 +176,60 @@ class PacmanRewardWrapper(gym.Wrapper):
 
         stagnation_penalty = 0
 
-        if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
-            # penalty for not moving around
-            position_count = self.position_history.count(current_position)
-            if position_count < 5:
+
+        # penalty for not moving around
+        if self.episode > 200:
+            self.action_history.append(action)
+            action_count = self.action_history.count(action)
+            if action_count < 100:
                 stagnation_penalty = 0
             else:
-                stagnation_penalty = self.stagnation_penalty
+                    
+                stagnation_penalty = .1 * (action_count) / len(self.action_history)
     
             modified_reward -= stagnation_penalty
 
-        if info['lives'] < self.lives :
-            # penalty for death
-            self.delay_counter = 0
-            death_penalty =  self.death_penalty
-            modified_reward -= death_penalty
-            self.lives = info['lives']
-            if self.lives == 0:
-                modified_reward -= self.death_penalty * .5
-                self.score_history.append(self.total_reward)
-        # else:
-        #     modified_reward += .1
+
+        if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
+            # penalty for not moving around
+            position_count = self.position_history.count(current_position)
+            if position_count < 10:
+                stagnation_penalty = 0
+            else:
+                
+                stagnation_penalty = (25 * position_count) / len(self.position_history)
+    
+            modified_reward -= stagnation_penalty
+
+        # if info['lives'] < self.lives :
+        #     # penalty for death
+        #     self.delay_counter = 0
+        #     death_penalty =  self.death_penalty
+        #     modified_reward -= death_penalty
+        #     self.lives = info['lives']
+        #     if self.lives == 0:
+        #         modified_reward -= self.death_penalty * .5
+        #         self.score_history.append(self.total_reward)
+        else:
+            modified_reward += .1
             # alive reward
         
-        if max(self.score_history) < self.total_reward:
-            # reward for new high score
-                # modified_reward += .01
-                if self.score_best < self.total_reward:
-                    self.score_best = self.total_reward
+        # if max(self.score_history) < self.total_reward:
+        #     # reward for new high score
+        #     if self.episode > 1:
+        #         modified_reward += .1
+        #     if self.score_best < self.total_reward:
+        #         self.score_best = self.total_reward
 
-        # if self.episode > 50:
-        if current_position != (88,98) and not gain:
+
+        if self.episode > 200:
             obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
             r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
 
             modified_reward += self.alpha * r_i.item()
         
+
+        modified_reward /= 10
 
 
         self.prev_score = current_score
@@ -278,6 +299,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.exploration_bonus = exploration_bonus
         self.stagnation_penalty = stagnation_penalty
         self.death_penalty = death_penalty
+        self.episode = -1
         
         self.visited_rooms = set()
         self.prev_position = None
@@ -287,6 +309,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.position_history = deque(maxlen=500)
         self.rnd_model = rnd_model
         self.device = rnd_model.device
+        self.score_best = 0
 
         self.alpha = alpha
 
@@ -298,6 +321,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.lives = self._get_lives(obs)
         self.total_reward = 0
         self.position_history.clear()
+        self.episode += 1
         return obs, info
 
     def step(self, action):
@@ -335,18 +359,26 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.lives = lives
 
         obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device)
-        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detatch().cpu().numpy()[0]
+        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
         r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
 
         modified_reward += self.alpha * r_i
 
+
         self.total_reward += reward
+
+        if self.total_reward > self.score_best:
+            self.score_best = self.total_reward
         info.update({
             "modified_reward": modified_reward,
             "score": score,
             "room": room,
             "position": position,
             "lives": lives,
+            'total_reward': self.total_reward,
+            'original_reward': reward,
+            'score best': self.score_best,
+            'episode' : self.episode
 
         })
 
@@ -574,11 +606,11 @@ def make_envs(env_name, num_envs, args, train=True, rnd_model=None):
     if 'Pacman' in args.env_name:
         envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper) for _ in range(num_envs)])
     else:
-        envs = gym.vector.SyncVectorEnv(make_env(env_name, rnd_model, obs, MontezumaRewardWrapper))
+        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper) for _ in range(num_envs)])
     envs.reset(seed=args.seed)
     return envs
 
-def take_action(a, eps):
+def take_action(a, eps, env):
     dist = torch.distributions.Categorical(a)
     if np.random.rand() < eps:
         action = dist.sample()
@@ -586,6 +618,9 @@ def take_action(a, eps):
         action = torch.argmax(a, dim=-1)
     logp = dist.log_prob(action)
     entropy = dist.entropy()
-    
-    return action.cpu().detach().numpy(), logp, entropy
+
+    if "Pacman" in env:
+        return action.cpu().detach().numpy() + 1, logp, entropy
+    else:
+        return action.cpu().detach().numpy(), logp, entropy
         

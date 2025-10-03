@@ -21,6 +21,7 @@ class FeudalNetwork(nn.Module):
         self.preprocessor = Preprocessor(input_dim, device, mlp)
 
         self.perception = Perception(input_dim, self.d, mlp)
+        self.action_embed = nn.Linear(1, self.d, bias=0)
 
         self.manager = Manager(self.c, self.d, self.r, args, device)
         self.worker = Worker(self.b, self.c, self.d, self.k, n_actions, device, args)
@@ -42,10 +43,11 @@ class FeudalNetwork(nn.Module):
             if layer.bias is not None:
                 nn.init.constant_(layer.bias.data,0)
 
-    def forward(self, x, goals, states, mask, save=True):
+    def forward(self, x, goals, states , action, mask, save=True):
         x = self.preprocessor(x)
         z = self.perception(x)
-        goal, hidden_m, state, value_m = self.manager(z, self.hidden_m, mask)
+        action = self.action_embed(action) * mask
+        goal, hidden_m, state, value_m = self.manager(z, self.hidden_m, action, mask)
 
         if len(goals) > (2 * self.c + 1):
             goals.pop(0)
@@ -54,7 +56,7 @@ class FeudalNetwork(nn.Module):
         goals.append(goal)
         states.append(state.detach())
         
-        action_dist, hidden_w, value_w = self.worker(z,  goals[:self.c + 1], self.hidden_w, mask)
+        action_dist, hidden_w, value_w = self.worker(z,  goals[:self.c + 1], self.hidden_w, action, mask)
         if save:
             self.hidden_m = (hidden_m[0].detach(),hidden_m[1].detach())
             self.hidden_w = (hidden_w[0].detach(),hidden_w[1].detach())
@@ -83,8 +85,9 @@ class FeudalNetwork(nn.Module):
         goals = [torch.zeros_like(template).to(self.device) for _ in range(2*self.c+1)]
         states = [torch.zeros_like(template).to(self.device) for _ in range(2*self.c+1)]
         masks = [torch.ones(self.b, 1).to(self.device) for _ in range(2*self.c+1)]
-        return goals, states, masks
-    
+        action = torch.zeros(self.b,1).to(self.device)
+        return goals, states, masks, action
+
     def eps_decay(self):
         try:
             self.manager.eps *= self.decay
@@ -128,17 +131,13 @@ class Manager(nn.Module):
         self.r = r # dilation elvel
         self.device = device
 
-        self.Mspace = nn.Linear(self.d, self.d)
+        self.Mspace = nn.Linear(self.d * 2, self.d)
         self.Mrnn = DilatedLSTM(self.d, self.d, self.r)
-        self.critic = nn.Sequential(
-            nn.Linear(self.d, self.d // 2),
-            nn.ReLU(),
-            nn.Linear(self.d //2 , 1)
-        )
+        self.critic = nn.Linear(self.d, 1)
 
 
-    def forward(self, z, hidden, mask):
-        state = F.relu(self.Mspace(z))
+    def forward(self, z, hidden, action, mask):
+        state = F.tanh(self.Mspace(torch.cat([z, action], dim=1)))
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
         value_est = self.critic(goal_hat)
@@ -199,7 +198,7 @@ class Worker(nn.Module):
         self.device = device
         self.eps = args.eps
 
-        self.Wrnn = nn.LSTMCell(d, k * self.num_actions)
+        self.Wrnn = nn.LSTMCell(d * 2, k * self.num_actions)
         self.phi = nn.Linear(d, k, bias=False)
 
         self.critic = nn.Sequential(
@@ -208,9 +207,9 @@ class Worker(nn.Module):
             nn.Linear(50,1)
         )
     
-    def forward(self, z, goals, hidden, mask):
+    def forward(self, z, goals, hidden, action, mask):
         hidden = (mask * hidden[0], mask * hidden[1])
-        u, cx = self.Wrnn(z, hidden)
+        u, cx = self.Wrnn(torch.cat([z, action], dim=1), hidden)
         hidden = (u, cx)
 
         goals = torch.stack(goals).detach().sum(dim=0)
@@ -354,15 +353,13 @@ class RunningMeanStd:
         return new_mean, tot_count, new_var
     
 def feudal_loss(storage, next_v_m, next_v_w, args, step):
-    warmup = 1e6
     # Discount rewards, both of size B x T
     ret_m = next_v_m
     ret_w = next_v_w
-
-    y = 0
-
     storage.placeholder()  # Fill ret_m, ret_w with empty vals
     for i in reversed(range(len(storage.m_r))):
+        action_entropy = .01 * torch.sum(storage.actions[-1] * torch.log(storage.actions[-1] + 1e-8), dim=-1)
+
         # calculate R = sum(r_i + sum(gamma * R_i-1))
         if args.maximal:
             returns_canidates = torch.stack([
@@ -371,15 +368,15 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
             ])
             ret_m =torch.logsumexp(returns_canidates, dim=0)
         else:
-            ret_m = (storage.r[i] / 10) + args.gamma_m * (ret_m) * storage.m[i]
+            ret_m = (storage.r[i] + action_entropy) + args.gamma_m * (ret_m) * storage.m[i]
         
             
-        ret_w = storage.r[i] /10 + args.gamma_w * ret_w * storage.m[i]
+        ret_w = (storage.r[i] + action_entropy) + args.gamma_w * ret_w * storage.m[i]
         storage.ret_m[i] = ret_m
         storage.ret_w[i] = ret_w
 
     # Optionally, normalize the returns
-    # storage.normalize(['ret_w'])
+    # storage.normalize(['ret_w', 'ret_m'])
 
     rewards_intrinsic, value_m, value_w, ret_w, ret_m, logps, entropy, \
         state_goal_cosines, goal_entropy, goal_q = storage.stack(
@@ -394,10 +391,9 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
 
     advantage_m = ret_m - value_m 
 
-    goal_q = .3 * goal_q.mean()
+    goal_q = .9 * goal_q.mean()
     loss_worker = (logps * advantage_w.detach()).mean()
-    negative_cosine_pen =  F.relu(-state_goal_cosines).mean()
-    # state_goal_cosines = torch.clamp(state_goal_cosines, min=0)
+    # state_goal_cosines = (state_goal_cosines + 1) / 2
     loss_manager =  (state_goal_cosines * advantage_m.detach()).mean()
 
     # Update the critics into the right direction
@@ -406,9 +402,10 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
 
     entropy = entropy.mean()
     goal_entropy = goal_entropy.mean()
+    entropy_coef = args.entropy_coef * max(1/250, 2e6 / max(2e6, (step / 4)))
 
-    loss = - loss_worker - loss_manager + goal_q + negative_cosine_pen + value_w_loss + value_m_loss \
-        - (args.entropy_coef * entropy)
+    loss = - loss_worker - loss_manager + value_w_loss + value_m_loss \
+        - (entropy_coef * entropy)
 
     return loss, {'loss/total_fun_loss': loss.item(),
                   'loss/worker': loss_worker.item(),

@@ -59,4 +59,4 @@ class RNDModel(nn.Module):
             normalized = (loss - self.running_mean.to(self.device)) / std.to(self.device)
             return torch.clamp(normalized.mean(), 0, 5)
         else:
-            return torch.clamp(loss.mean(), 0, 5)
+            return torch.clamp(loss.mean() / 10, 0, 100)
