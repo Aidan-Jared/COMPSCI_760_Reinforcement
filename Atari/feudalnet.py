@@ -87,6 +87,7 @@ class FeudalNetwork(nn.Module):
             self.worker.eps *= self.decay
         except:
             self.worker.eps *= self.decay
+            
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp = False):
         super().__init__()
@@ -222,7 +223,12 @@ class Worker(nn.Module):
             mask = mask * masks[t - i]
         r_i = r_i.detach()
         return r_i / self.c
-    
+
+def _to_numpy(x):
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().float().numpy()
+    return np.asarray(x, dtype=np.float32)
+  
 class Preprocessor:
     def __init__(self, shape, device='cpu', mlp=False):
         self.mlp = mlp
@@ -234,26 +240,20 @@ class Preprocessor:
         self.rms = RunningMeanStd(shape = (1,) + self.shape)
 
     def __call__(self, x):
-        if not self.mlp:
-            x = np.asarray(x).reshape(x.shape[0], *self.shape)
-            self.rms.update(x)
-            
-            # Check if std is reasonable
-            std = np.sqrt(self.rms.var + 1e-5)
-            if std.mean() < 1e-3:  # Too small, use simple normalization
-                x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
-            else:
-                x_normalized = (x - self.rms.mean) / std
-            
-            # CRITICAL: Clip to reasonable range
-            x_normalized = np.clip(x_normalized, -3.0, 3.0)
-            
-            return torch.FloatTensor(x_normalized).to(self.device)
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x).to(self.device)
+        elif isinstance(x, torch.Tensor):
+            x = x.to(self.device)
+        # if pixel input and uint8, scale once
+        if x.dtype == torch.uint8:
+            x = x.float() / 255.0
         else:
-            return torch.FloatTensor(x).to(self.device)
+            x = x.float()
+        # any RunningMeanStd updates should use torch ops and not break autograd
+        return x
 
 class Qlearn(nn.Module):
-    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):
+    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp, init_weights=None):
         super().__init__()
         self.d = int(hidden_dim)
         self.n_actions = int(n_actions)
@@ -276,8 +276,10 @@ class Qlearn(nn.Module):
             nn.ReLU(),
             nn.Linear(h3, self.n_actions),
         )
-
-        self.apply(self._weight_init)
+        if init_weights:
+            self.load_state_dict(init_weights)
+        else:
+            self.apply(self._weight_init)
         self.to(device)
 
     @staticmethod

@@ -114,12 +114,17 @@ def experiment(args):
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
     else:
+        '''save_data = torch.load("models/MsPacman-v5_feudalv3_seed=0_step=7750000.pt", weights_only=False)
+        args = save_data['args']
+        model_weights = save_data['model']
+        print(f"model weights: {model_weights}")'''
         feudalnet = Qlearn(
             input_dim=envs.single_observation_space.shape,
             hidden_dim= args.hidden_dim_manager,
             n_actions=envs.single_action_space.n,
             device=device,
             mlp=args.mlp,
+            #init_weights=model_weights
         )
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     
