@@ -21,29 +21,29 @@ parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
 parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
-parser.add_argument('--grad-clip', type=float, default=4,
+parser.add_argument('--grad-clip', type=float, default=5,
                     help='Gradient clipping (recommended).')
-parser.add_argument('--entropy-coef', type=float, default=0.25,
+parser.add_argument('--entropy-coef', type=float, default=0.01,
                     help='Entropy coefficient to encourage exploration.')
 parser.add_argument('--mlp', type=int, default=1,
                     help='toggle to feedforward ML architecture')
 
 # SPECIFIC FEUDALNET PARAMETERS
-parser.add_argument('--time-horizon', type=int, default=30,
+parser.add_argument('--time-horizon', type=int, default=40,
                     help='Manager horizon (c)')
-parser.add_argument('--hidden-dim-manager', type=int, default=128,
+parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
-parser.add_argument('--hidden-dim-worker', type=int, default=64,
+parser.add_argument('--hidden-dim-worker', type=int, default=128,
                     help='Hidden dim for worker (k)')
-parser.add_argument('--gamma-w', type=float, default=0.99,
+parser.add_argument('--gamma-w', type=float, default=0.95,
                     help="discount factor worker")
-parser.add_argument('--gamma-m', type=float, default=0.997,
+parser.add_argument('--gamma-m', type=float, default=0.995,
                     help="discount factor manager"),
-parser.add_argument('--alpha', type=float, default=.5,
+parser.add_argument('--alpha', type=float, default=.1,
                     help='Intrinsic reward coefficient in [0, 1]')
 parser.add_argument('--eps', type=float, default=.9,
                     help='Random Gausian goal for exploration')
-parser.add_argument('--dilation', type=int, default=5,
+parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM.')
 parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
@@ -80,10 +80,7 @@ def experiment(args):
         torch.backends.cudnn.benchmark = False
     
     envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model)
-    if "Pacman" in args.env_name:
-        n_actions = envs.single_action_space.n -1
-    else:
-        n_actions = envs.single_action_space.n
+    n_actions = envs.single_action_space.n
     if args.model == 'feudal':
         feudalnet = FeudalNetwork(
             num_workers=args.num_workers,

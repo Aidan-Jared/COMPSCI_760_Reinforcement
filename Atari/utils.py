@@ -102,7 +102,7 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.4, death_penalty=4, pellet_bonus=.1, stagnation_penalty_enable = True):
+    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=.4, death_penalty=4, pellet_bonus=1, stagnation_penalty_enable = True):
         super().__init__(env)
 
         self.pellet_bonus = pellet_bonus
@@ -158,11 +158,13 @@ class PacmanRewardWrapper(gym.Wrapper):
         modified_reward = reward
         if reward == 10:
             # reward pellet collection
-             modified_reward = 1 + min(self.pellet_bonus, info['episode_frame_number']/5000)
+             modified_reward = 1
+        if reward == 50:
+            modified_reward = 5
         if reward == 100:
-            modified_reward = 2
+            modified_reward = 10
         if reward >= 200:
-            modified_reward = 2.5
+            modified_reward = 15
         # if reward == 100:
         #     modified_reward = 20 * self.pellet_bonus
         # if reward >= 200:
@@ -178,48 +180,45 @@ class PacmanRewardWrapper(gym.Wrapper):
 
 
         # penalty for not moving around
-        if self.episode > 200:
-            self.action_history.append(action)
-            action_count = self.action_history.count(action)
-            if action_count < 100:
-                stagnation_penalty = 0
-            else:
+        # if self.episode > 200:
+        #     self.action_history.append(action)
+        #     action_count = self.action_history.count(action)
+        #     if action_count < 100:
+        #         stagnation_penalty = 0
+        #     else:
                     
-                stagnation_penalty = .1 * (action_count) / len(self.action_history)
+        #         stagnation_penalty = .1 * (50* action_count) / len(self.action_history)
     
-            modified_reward -= stagnation_penalty
+        #     modified_reward -= stagnation_penalty
 
 
-        if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
-            # penalty for not moving around
-            position_count = self.position_history.count(current_position)
-            if position_count < 10:
-                stagnation_penalty = 0
-            else:
+        # if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
+        #     # penalty for not moving around
+        #     position_count = self.position_history.count(current_position)
+        #     if position_count < 3:
+        #         stagnation_penalty = 0
+        #     else:
                 
-                stagnation_penalty = (25 * position_count) / len(self.position_history)
+        #         stagnation_penalty = (position_count) / len(self.position_history)
     
-            modified_reward -= stagnation_penalty
+        #     modified_reward -= stagnation_penalty
 
-        # if info['lives'] < self.lives :
-        #     # penalty for death
-        #     self.delay_counter = 0
-        #     death_penalty =  self.death_penalty
-        #     modified_reward -= death_penalty
-        #     self.lives = info['lives']
-        #     if self.lives == 0:
-        #         modified_reward -= self.death_penalty * .5
-        #         self.score_history.append(self.total_reward)
-        else:
-            modified_reward += .1
+        if info['lives'] < self.lives :
+            # penalty for death
+            death_penalty =  self.death_penalty
+            modified_reward -= death_penalty
+            self.lives = info['lives']
+            if self.lives == 0:
+                # modified_reward -= self.death_penalty * .5
+                self.score_history.append(self.total_reward)
             # alive reward
         
-        # if max(self.score_history) < self.total_reward:
-        #     # reward for new high score
+        if max(self.score_history) < self.total_reward:
+            # reward for new high score
         #     if self.episode > 1:
         #         modified_reward += .1
-        #     if self.score_best < self.total_reward:
-        #         self.score_best = self.total_reward
+            if self.score_best < self.total_reward:
+                self.score_best = self.total_reward
 
 
         if self.episode > 200:
@@ -229,7 +228,7 @@ class PacmanRewardWrapper(gym.Wrapper):
             modified_reward += self.alpha * r_i.item()
         
 
-        modified_reward /= 10
+        # modified_reward /= 10
 
 
         self.prev_score = current_score
@@ -619,8 +618,5 @@ def take_action(a, eps, env):
     logp = dist.log_prob(action)
     entropy = dist.entropy()
 
-    if "Pacman" in env:
-        return action.cpu().detach().numpy() + 1, logp, entropy
-    else:
-        return action.cpu().detach().numpy(), logp, entropy
+    return action.cpu().detach().numpy(), logp, entropy
         

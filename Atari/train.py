@@ -21,17 +21,13 @@ class Train:
         self.args = args
         self.rnd = rnd
         self.rnd_optimizer = torch.optim.Adam(self.rnd.parameters(), 1e-3)
-        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(
-                                                    self.optimizer,
-                                                    step_size=1e6,  # Decay every 5000 updates
-                                                    gamma=0.9
-                                                )
+        self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_steps / self.num_steps, eta_min= 1e-5)
 
     def train_feudal(self):
         eps = self.args.eps
         save_steps =  list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
-        goals, states, masks, action = self.model.init_obj()
-        x, info = self.envs.reset(seed=self.args.seed)
+        goals, states, masks = self.model.init_obj()
+        x, info = self.envs.reset()
         step = 0
         visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
         while step < self.max_steps:
@@ -43,7 +39,7 @@ class Train:
                                     'adv_m', 'adv_w', 'goal_entropy', 'obs', 'goal_q'])
 
             for _ in range(self.num_steps):
-                action_dist, goals, states, value_m, value_w = self.model(x, goals, states, action, masks[-1])
+                action_dist, goals, states, value_m, value_w = self.model(x, goals, states, masks[-1])
                 action, logp, entropy = take_action(action_dist, eps, self.args.env_name)
                 x, reward, terminated, truncated, info = self.envs.step(action)
                 if step % 160 == 0:
@@ -53,7 +49,6 @@ class Train:
                 mask = torch.FloatTensor(1 - (terminated + truncated)).unsqueeze(-1).to(self.device)
                 masks.pop(0)                    
                 masks.append(mask)
-                action = torch.FloatTensor(action).unsqueeze(-1).to(self.device)
 
                 storage.add({
                     'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
@@ -69,14 +64,13 @@ class Train:
                     'm': mask,
                     'obs': torch.Tensor(x).to(self.device),
                     'goal_q': self.model.goal_quality(states, goals, masks),
-                    'actions': action
                 })
 
                 step += self.num_workers
 
             with torch.no_grad():
                 # predict the reward of the next step
-                *_, next_v_m, next_v_w = self.model(x, goals, states, action, mask, save = False)
+                *_, next_v_m, next_v_w = self.model(x, goals, states, mask, save = False)
                 next_v_m = next_v_m.detach()
                 next_v_w = next_v_w.detach()
 
@@ -88,7 +82,7 @@ class Train:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.grad_clip)
             self.optimizer.step()
 
-            self.lr_scheduler.step()
+            # self.lr_scheduler.step()
 
 
             obs_batch = torch.stack(storage.obs)
