@@ -49,7 +49,7 @@ parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalv4',
+parser.add_argument('--run-name', type=str, default='feudalv5',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
@@ -65,6 +65,8 @@ parser.add_argument('--eps-decay-freq', type=int, default=1280, help='steps betw
 
 parser.add_argument('--maximal', type=bool, default=False, help='use maximal reward')
 
+parser.add_argument('--load-file', type=str, default=None, help='file to load to continue training')
+
 args = parser.parse_args()
 
 def experiment(args):
@@ -79,7 +81,15 @@ def experiment(args):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     
-    envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model)
+    rnd_delay = None
+    if args.load_file:
+        save_data = torch.load(args.model, weights_only=False)
+        args = save_data['args']
+        rnd_weights = save_data['rnd']
+        rnd_model.load_state_dict(rnd_weights)
+        rnd_delay = 0
+
+    envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model, rnd_delay=rnd_delay)
     n_actions = envs.single_action_space.n
     if args.model == 'feudal':
         feudalnet = FeudalNetwork(
@@ -125,6 +135,11 @@ def experiment(args):
             mlp=args.mlp,
         )
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
+    
+    if args.load_file:
+        model_weights = save_data['model']
+        feudalnet.load_state_dict(model_weights)
+        args.max_steps -= save_data['step']
     
     train = Train(args, feudalnet, optimizer, envs, logger, rnd_model)
     

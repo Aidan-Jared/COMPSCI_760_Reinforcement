@@ -395,7 +395,7 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
     loss_manager = (state_goal_cosines * advantage_m.detach()).mean()
 
     # Update the critics into the right direction
-    value_w_loss = 0.01 * advantage_w.pow(2).mean()
+    value_w_loss = 0.001 * advantage_w.pow(2).mean()
     value_m_loss = 0.001 * advantage_m.pow(2).mean()
 
     entropy = entropy.mean()

@@ -82,7 +82,7 @@ class Train:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.grad_clip)
             self.optimizer.step()
 
-            # self.lr_scheduler.step()
+            self.lr_scheduler.step()
 
 
             obs_batch = torch.stack(storage.obs)
@@ -99,14 +99,17 @@ class Train:
                 # reduce random exploration
                 eps *= self.args.decay
                 self.model.eps_decay()
+                self.args.eps = eps
 
             self.logger.log_scalars(loss_dict, step)
             if len(save_steps) > 0 and step > save_steps[0]:
                     torch.save({
                         'model': self.model.state_dict(),
+                        'rnd' : self.rnd.state_dict(),
                         'args': self.args,
                         'processor_mean': self.model.preprocessor.rms.mean,
-                        'optim': self.optimizer.state_dict()},
+                        'optim': self.optimizer.state_dict(),
+                        'step': step},
                         f'models/{self.args.env_name[4:]}_{self.args.run_name}_step={step}.pt')
                     save_steps.pop(0)
         self.envs.close()

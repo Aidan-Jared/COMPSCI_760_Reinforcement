@@ -10,7 +10,7 @@ import json
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 
-parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudalv2_seed=0_step=30003200.pt',
+parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudalv4_seed=0_step=10008000.pt',
                     help='path to model save data')
 
 arg = parser.parse_args()
@@ -34,14 +34,14 @@ def test_feudal(model, args, envs, iter):
         step += 1
         total_reward = info['total_reward']
     
-    if iter == 0:
-            torch.onnx.export(
-                model,
-                (x, goals, states, masks[-1]),
-                'model.feudalModel.onnx',
-                input_names=['current_state', 'goals', 'states', 'mask'],
-                dynamo=True
-            )
+    # if iter == 0:
+    #         torch.onnx.export(
+            #     model,
+            #     (x, goals, states, masks[-1]),
+            #     'model.feudalModel.onnx',
+            #     input_names=['current_state', 'goals', 'states', 'mask'],
+            #     dynamo=True
+            # )
 
     return total_reward
     
