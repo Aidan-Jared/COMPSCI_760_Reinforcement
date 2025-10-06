@@ -130,11 +130,18 @@ class Manager(nn.Module):
 
         self.Mspace = nn.Linear(self.d, self.d)
         self.Mrnn = DilatedLSTM(self.d, self.d, self.r)
-        self.critic = nn.Linear(self.d, 1)
+        self.critic = nn.Sequential(
+            nn.Linear(self.d, self.d //2),
+            nn.ReLU(),
+            # nn.Linear(self.d //2, self.d //4),
+            # nn.ReLU(),
+            nn.Linear(self.d //2, 1)
+        )
+        # self.critic = nn.Linear(self.d, 1)
 
 
     def forward(self, z, hidden, mask):
-        state = F.tanh(self.Mspace(z))
+        state = self.Mspace(z)
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
         value_est = self.critic(goal_hat)
@@ -264,7 +271,7 @@ class Preprocessor:
                 x_normalized = (x - self.rms.mean) / std
             
             # CRITICAL: Clip to reasonable range
-            x_normalized = np.clip(x_normalized, -3.0, 3.0)
+            # x_normalized = np.clip(x_normalized, -3.0, 3.0)
             
             return torch.FloatTensor(x_normalized).to(self.device)
         else:
@@ -376,19 +383,20 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
     
     # want to get closer to 0
     advantage_w = (ret_w + args.alpha * r_i) - value_w
-    advantage_w = (advantage_w - advantage_w.mean()) / (advantage_w.std() + 1e-8)
+    # advantage_w = (advantage_w - advantage_w.mean()) / (advantage_w.std() + 1e-8)
 
     advantage_m = ret_m - value_m 
-    advantage_m = (advantage_m - advantage_m.mean()) / (advantage_m.std() + 1e-8)
+    # if advantage_m.std() > 20:
+    #     advantage_m = (advantage_m - advantage_m.mean()) / (advantage_m.std() + 1e-8)
 
-    goal_q = .9 * goal_q.mean()
+    goal_q = goal_q.mean()
     loss_worker = (logps * advantage_w.detach()).mean()
     # state_goal_cosines = (state_goal_cosines + 1) / 2
-    loss_manager =  (state_goal_cosines * advantage_m.detach()).mean()
+    loss_manager = (state_goal_cosines * advantage_m.detach()).mean()
 
     # Update the critics into the right direction
-    value_w_loss = 0.5 * advantage_w.pow(2).mean()
-    value_m_loss = 0.5 * advantage_m.pow(2).mean()
+    value_w_loss = 0.01 * advantage_w.pow(2).mean()
+    value_m_loss = 0.001 * advantage_m.pow(2).mean()
 
     entropy = entropy.mean()
     goal_entropy = goal_entropy.mean()

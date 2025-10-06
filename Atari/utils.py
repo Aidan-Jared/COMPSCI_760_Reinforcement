@@ -102,7 +102,7 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=.4, death_penalty=4, pellet_bonus=1, stagnation_penalty_enable = True):
+    def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.4, death_penalty=50, pellet_bonus=1, stagnation_penalty_enable = True):
         super().__init__(env)
 
         self.pellet_bonus = pellet_bonus
@@ -144,39 +144,37 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.position_history = deque(maxlen=200)
         self.action_history = deque(maxlen=100)
         self.new_best = False
+        ram = self.env.unwrapped.ale.getRAM()
+        info['ram'] = ram
         
         return obs, info
     
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        ram = self.env.unwrapped.ale.getRAM()
         current_score = self.total_reward + reward
         self.total_reward += reward
-        current_position = self._get_position(obs)
-        stagnate = True
+        # current_position = self._get_position(ram)
 
 
         modified_reward = reward
         if reward == 10:
             # reward pellet collection
-             modified_reward = 1
+             modified_reward = 10
         if reward == 50:
-            modified_reward = 5
+            modified_reward = 20
         if reward == 100:
-            modified_reward = 10
+            modified_reward = 25
         if reward >= 200:
-            modified_reward = 15
-        # if reward == 100:
-        #     modified_reward = 20 * self.pellet_bonus
-        # if reward >= 200:
-        #     modified_reward = 25 * self.pellet_bonus
+            modified_reward = 30
 
-        if current_position not in self.position_history:
-            # Reward new positions
-            modified_reward += .5
-            stagnate = False
-        self.position_history.append(current_position)
+        # if current_position not in self.position_history:
+        #     # Reward new positions
+        #     modified_reward += .05
+        #     stagnate = False
+        # self.position_history.append(current_position)
 
-        stagnation_penalty = 0
+        # stagnation_penalty = 0
 
 
         # penalty for not moving around
@@ -213,16 +211,16 @@ class PacmanRewardWrapper(gym.Wrapper):
                 self.score_history.append(self.total_reward)
             # alive reward
         
-        if max(self.score_history) < self.total_reward:
+        # if max(self.score_history) < self.total_reward:
             # reward for new high score
         #     if self.episode > 1:
         #         modified_reward += .1
-            if self.score_best < self.total_reward:
+            # 
+        if self.score_best < self.total_reward:
                 self.score_best = self.total_reward
 
-
         if self.episode > 200:
-            obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+            obs_tensor = torch.tensor(ram, dtype=torch.float32, device=self.device).unsqueeze(0)
             r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
 
             modified_reward += self.alpha * r_i.item()
@@ -232,24 +230,25 @@ class PacmanRewardWrapper(gym.Wrapper):
 
 
         self.prev_score = current_score
-        self.prev_positon = current_position
+        # self.prev_positon = current_position
 
 
         info.update({
             'total_reward': self.total_reward,
             'original_reward': reward,
             'modified_reward': modified_reward,
-            'position': current_position,
+            # 'position': current_position,
             'score': current_score,
             'using_ram': self.ram,
             'episode': self.episode,
-            'score best': self.score_best
+            'score best': self.score_best,
+            'ram': ram
         })
 
         return obs, modified_reward, terminated, truncated, info
     
     def _get_position(self, obs):
-        if self.ram and len(obs) >= 128:
+        if len(obs) >= 128:
             try:
                 x = obs[10]
                 y = obs[16]

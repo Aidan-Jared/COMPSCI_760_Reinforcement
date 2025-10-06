@@ -62,7 +62,7 @@ class Train:
                     's_goal_cos': self.model.state_goal_cosine(states, goals, masks),
                     'goal_entropy' :self.model.goal_entropy(goals, masks),
                     'm': mask,
-                    'obs': torch.Tensor(x).to(self.device),
+                    'obs': torch.Tensor(info['ram']).to(self.device),
                     'goal_q': self.model.goal_quality(states, goals, masks),
                 })
 

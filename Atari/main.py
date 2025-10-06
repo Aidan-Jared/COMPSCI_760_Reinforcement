@@ -9,13 +9,13 @@ from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=5e-3,
+parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=32,
+parser.add_argument('--num-workers', type=int, default=8,
                     help='number of parallel environments to run')
-parser.add_argument('--num-steps', type=int, default=400,
+parser.add_argument('--num-steps', type=int, default=1000,
                     help='number of steps the agent takes before updating')
 parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
@@ -23,9 +23,9 @@ parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
 parser.add_argument('--grad-clip', type=float, default=5,
                     help='Gradient clipping (recommended).')
-parser.add_argument('--entropy-coef', type=float, default=0.01,
+parser.add_argument('--entropy-coef', type=float, default=0.02,
                     help='Entropy coefficient to encourage exploration.')
-parser.add_argument('--mlp', type=int, default=1,
+parser.add_argument('--mlp', type=int, default=0,
                     help='toggle to feedforward ML architecture')
 
 # SPECIFIC FEUDALNET PARAMETERS
@@ -37,9 +37,9 @@ parser.add_argument('--hidden-dim-worker', type=int, default=128,
                     help='Hidden dim for worker (k)')
 parser.add_argument('--gamma-w', type=float, default=0.95,
                     help="discount factor worker")
-parser.add_argument('--gamma-m', type=float, default=0.995,
+parser.add_argument('--gamma-m', type=float, default=0.99,
                     help="discount factor manager"),
-parser.add_argument('--alpha', type=float, default=.1,
+parser.add_argument('--alpha', type=float, default=.2,
                     help='Intrinsic reward coefficient in [0, 1]')
 parser.add_argument('--eps', type=float, default=.9,
                     help='Random Gausian goal for exploration')
@@ -55,7 +55,7 @@ parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
                     default='feudal', help="which model to train")
-parser.add_argument('--decay-limit', type=float, default=5e-2,
+parser.add_argument('--decay-limit', type=float, default=2e-1,
                     help='how much eps decays')
 
 # QLEARN SPECIFIC PARAMETERS
