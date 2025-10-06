@@ -17,7 +17,7 @@ arg = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def test_feudal(model, args, envs):
+def test_feudal(model, args, envs, iter):
     terminated, truncated = False, False
     total_reward = 0
     goals, states, masks = model.init_obj()
@@ -33,6 +33,15 @@ def test_feudal(model, args, envs):
             visualizer.capture_frame(envs, step, action, reward, terminated, truncated, info)
         step += 1
         total_reward = info['total_reward']
+    
+    if iter == 0:
+            torch.onnx.export(
+                model,
+                (x, goals, states, masks[-1]),
+                'model.feudalModel.onnx',
+                input_names=['current_state', 'goals', 'states', 'mask'],
+                dynamo=True
+            )
 
     return total_reward
     
@@ -82,7 +91,7 @@ if __name__ == "__main__":
     with torch.no_grad():
         for i in range(100):
             if args.model == 'feudal':
-                reward = test_feudal(model, args, envs)
+                reward = test_feudal(model, args, envs, i)
             elif args.model =='feudalTransformer':
                 pass
 

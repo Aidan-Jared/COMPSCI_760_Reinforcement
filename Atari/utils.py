@@ -64,7 +64,6 @@ class Logger:
         with open(f'logs/{self.log_name}', 'w') as r:
             json.dump(self.log, r)
 
-
 class Storage:
     def __init__(self, size, keys = None):
         if keys is None:
@@ -81,10 +80,11 @@ class Storage:
             getattr(self,k).append(v)
     
     def placeholder(self):
+        size = len(getattr(self, self.keys[0]))
         for k in self.keys:
             v = getattr(self, k)
             if len(v) == 0:
-                setattr(self, k, [None] * self.size)
+                setattr(self, k, [None] * size)
     
     def reset(self):
         for key in self.keys:
@@ -97,96 +97,31 @@ class Storage:
             setattr(self, key, [i for i in k])
     
     def stack(self, keys):
-        data = [getattr(self, k)[:self.size] for k in keys]
+        size = len(getattr(self, self.keys[0]))
+        data = [getattr(self, k)[:size] for k in keys]
         return map(lambda x: torch.stack(x, dim=0), data)
 
-class StagnationPenalty:
-    def __init__(self, stagnation_pen = .0001, position_history_size = 1000, stagnation_threshold = .8, penalty_escalation = 1.2, max_mult = 40, delay=65):
-        self.stagnation_pen = stagnation_pen
-        self.position_history_size = position_history_size
-        self.stagnation_threshold = stagnation_threshold
-        self.penalty_escalation = penalty_escalation
-        self.max_multi = max_mult
-        self.delay = delay
-        self.delay_counter = 0
-        
-        self.position_history = deque(maxlen=self.position_history_size)
-        self.counter = 0
-        self.current_multi = 1.0
-
-    def calculate_stagnation_penalty(self, current_position):
-        if current_position is None or self.delay_counter < self.delay:
-            self.delay_counter += 1
-            return 0.0
-        
-        self.position_history.append(current_position)
-
-        if len(self.position_history) < self.position_history_size // 2:
-            return 0.0
-        
-        unique_positions = len(set(self.position_history))
-        diversity_ratio = unique_positions / len(self.position_history)
-
-
-        penalty = 0
-
-        if diversity_ratio < self.stagnation_threshold:
-            self.current_multi *= self.penalty_escalation
-
-            penalty = self.stagnation_pen * min(self.max_multi, self.current_multi)
-
-        else:
-            self.counter = max(0, self.counter-5)
-            self.current_multi = max(1, self. current_multi / self.penalty_escalation)
-        self.delay_counter += 1
-
-        return penalty
-    
-    def reset_stagnation_tracking(self):
-        self.position_history.clear()
-        self.counter = 0
-        self.current_multi = 1
-
-class Reward:
-    def _init__(self, gamma = .99):
-        self.prev_reward = 0
-        self.gamma = gamma
-    
-    def maximum_reward(self, score):
-        if score > 0:
-            reward = max(score, self.gamma * self.prev_reward)
-        else:
-            reward = min(score, self.gamma * self.prev_reward)
-        self.prev_reward = reward
-        return reward
-    
-    def diff_reward(self, score):
-        reward = abs(score - self.gamma * self.prev_reward)
-        self.prev_reward = reward
-        return reward
-
-
-class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
-    def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.01, death_penalty=20, pellet_bonus=.1, stagnation_penalty_enable = True):
+class PacmanRewardWrapper(gym.Wrapper):
+    def __init__(self, env, rnd_model, alpha = .01, stagnation_penalty=.4, death_penalty=50, pellet_bonus=1, stagnation_penalty_enable = True):
         super().__init__(env)
-        if stagnation_penalty_enable:
-            StagnationPenalty.__init__(self,stagnation_pen=stagnation_penalty, position_history_size=750, stagnation_threshold=.75, penalty_escalation=1.2)
 
         self.pellet_bonus = pellet_bonus
         self.death_penalty = death_penalty
+        self.stagnation_penalty = stagnation_penalty
         self.stagnation_penalty_enable = stagnation_penalty_enable
         self.ram = self._check_ram_observation()
         self.lives = 0
-        self.pellet_history = deque(maxlen=1000)
 
         self.prev_score = 0
         self.total_reward = 0
         self.prev_positon = None
-        self.corridor_history = deque(maxlen=300)
-        self.courner_time_counter = 0
         self.score_best = 0
         self.episode = -1
-        self.position_history = deque(maxlen=300)
+        self.position_history = deque(maxlen=200)
+        self.action_history = deque(maxlen=100)
+        self.score_history = deque(maxlen=25)
+        self.score_history.append(0)
+        self.new_best = False
 
         self.rnd_model = rnd_model
         self.alpha = alpha
@@ -201,133 +136,119 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
         self.prev_score = 0
-        self.pellet_history = deque(maxlen=1000)
         self.episode +=1
         self.prev_positon = self._get_position(obs)
-        self.corridor_history.clear()
         self.lives = info['lives']
-        self.courner_time_counter = 0
         self.total_reward = 0
         self.delay_counter = 0
-        self.position_history = deque(maxlen=300)
-        if self.stagnation_penalty_enable:
-            self.reset_stagnation_tracking()
+        self.position_history = deque(maxlen=200)
+        self.action_history = deque(maxlen=100)
+        self.new_best = False
+        ram = self.env.unwrapped.ale.getRAM()
+        info['ram'] = ram
         
         return obs, info
     
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        ram = self.env.unwrapped.ale.getRAM()
         current_score = self.total_reward + reward
         self.total_reward += reward
-        current_position = self._get_position(obs)
-        stagnate = True
+        # current_position = self._get_position(ram)
 
-        # current_score = self._get_score(obs, info)
 
-        modified_reward = reward / 100
-        # self.pellet_history.append(current_score)
+        modified_reward = reward
         if reward == 10:
-        #     unique = len(set(self.pellet_history))
-        #     pellet_bonus = unique / len(self.pellet_history) + self.pellet_bonus
-            # score_increase = current_score - self.prev_score
-            modified_reward += self.pellet_bonus #* score_increase)
+            # reward pellet collection
+             modified_reward = 10
+        if reward == 50:
+            modified_reward = 20
+        if reward == 100:
+            modified_reward = 25
+        if reward >= 200:
+            modified_reward = 30
 
-        #     self.prev_score = current_score
-        #     self.prev_positon = current_position
+        # if current_position not in self.position_history:
+        #     # Reward new positions
+        #     modified_reward += .05
+        #     stagnate = False
+        # self.position_history.append(current_position)
 
-        #     info.update({
-        #         'total_reward': self.total_reward,
-        #         'original_reward': reward,
-        #         'modified_reward': modified_reward,
-        #         'position': current_position,
-        #         'score': current_score,
-        #         'using_ram': self.ram
-        #     })
-        #     return obs, modified_reward, terminated, truncated, info
+        # stagnation_penalty = 0
 
-        if current_position not in self.position_history:
-            self.position_history.append(current_position)
-            modified_reward += .1
-            stagnate = False
 
-        stagnation_penalty = 0
-        # corner_penalty = 0
-        # corridor_penalty = 0
+        # penalty for not moving around
+        # if self.episode > 200:
+        #     self.action_history.append(action)
+        #     action_count = self.action_history.count(action)
+        #     if action_count < 100:
+        #         stagnation_penalty = 0
+        #     else:
+                    
+        #         stagnation_penalty = .1 * (50* action_count) / len(self.action_history)
+    
+        #     modified_reward -= stagnation_penalty
 
-        if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
-            position_count = self.position_history.count(current_position)
-            if position_count < 25:
-                stagnation_penalty = 0
-            else:
-                position_len = len(self.position_history)
-                position_count /= position_len
-                stagnation_penalty = position_count * .1
-            # if len(self.position_history) == 500 and self.position_history[-1] != current_position:
-            #     self.position_history = self.position_history[-100:]
-            # stagnation_penalty = self.calculate_stagnation_penalty(current_position)
-            modified_reward -= stagnation_penalty
-            self.position_history.append(current_position)
 
-            # if self._is_corner_positon(current_position,  obs):
-            #     self.courner_time_counter += 1
-            #     if self.courner_time_counter > 20:
-            #         corner_penalty = .2 #* (self.courner_time_counter)
-            #         modified_reward -= corner_penalty
-            # else:
-            #     self.courner_time_counter = max(0,  self.courner_time_counter - 2)
-            
-            # self.corridor_history.append(current_position)
-            # if len(self.corridor_history) >= 20:
-            #     if self._detect_corridor_oscillation():
-            #         corridor_penalty = .01
-            #         modified_reward -= corridor_penalty 
-            #         # if self.alive > 0:
-            #             # self.alive -= corridor_penalty
+        # if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
+        #     # penalty for not moving around
+        #     position_count = self.position_history.count(current_position)
+        #     if position_count < 3:
+        #         stagnation_penalty = 0
+        #     else:
+                
+        #         stagnation_penalty = (position_count) / len(self.position_history)
+    
+        #     modified_reward -= stagnation_penalty
+
         if info['lives'] < self.lives :
-                # self.alive = 0
-            self.delay_counter = 0
-            death_penalty =  self.death_penalty# min(5, .01 * info['episode_frame_number'])
+            # penalty for death
+            death_penalty =  self.death_penalty
             modified_reward -= death_penalty
             self.lives = info['lives']
             if self.lives == 0:
-                modified_reward -= self.death_penalty * 2/5
-
-        modified_reward += min(.1, 0.001 + 1e-4 * self.total_reward) 
+                # modified_reward -= self.death_penalty * .5
+                self.score_history.append(self.total_reward)
+            # alive reward
         
+        # if max(self.score_history) < self.total_reward:
+            # reward for new high score
+        #     if self.episode > 1:
+        #         modified_reward += .1
+            # 
         if self.score_best < self.total_reward:
-            modified_reward += .1
-            self.score_best = self.total_reward
+                self.score_best = self.total_reward
 
-        if self.episode > 5:
-            last_N = [current_position == self.position_history[i] if len(self.position_history) > 10 else False for i in range(-10,0)]
-            if sum(last_N) == 0:
-                beta = max(1, 1000 / self.episode) * .01
-                obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
-                r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
+        if self.episode > 200:
+            obs_tensor = torch.tensor(ram, dtype=torch.float32, device=self.device).unsqueeze(0)
+            r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
 
-                modified_reward += self.alpha * r_i.item() *  beta
+            modified_reward += self.alpha * r_i.item()
+        
+
+        # modified_reward /= 10
 
 
         self.prev_score = current_score
-        self.prev_positon = current_position
+        # self.prev_positon = current_position
 
-        # modified_reward = self.maximum_reward(modified_reward)
 
         info.update({
             'total_reward': self.total_reward,
             'original_reward': reward,
             'modified_reward': modified_reward,
-            'position': current_position,
+            # 'position': current_position,
             'score': current_score,
             'using_ram': self.ram,
             'episode': self.episode,
-            'score best': self.score_best
+            'score best': self.score_best,
+            'ram': ram
         })
 
         return obs, modified_reward, terminated, truncated, info
     
     def _get_position(self, obs):
-        if self.ram and len(obs) >= 128:
+        if len(obs) >= 128:
             try:
                 x = obs[10]
                 y = obs[16]
@@ -349,39 +270,7 @@ class PacmanRewardWrapper(gym.Wrapper, StagnationPenalty):
               return obs[120] * 256 + obs[121]
             except IndexError:
                 return 0  
-    
-    def _is_corner_positon(self, position, obs):
-        if not position:
-            return False
-        
-        x, y = position
-
-        if self.ram:
-            return (x < 20 or x > 140 or y < 20 or y > 180)
-        else:
-            # For pixel version, check screen boundaries
-            obs_height, obs_width = obs.shape[:2] if len(obs.shape) >= 2 else (210, 160)
-            return (x < obs_width * 0.1 or x > obs_width * 0.9 or 
-                   y < obs_height * 0.1 or y > obs_height * 0.9)
-        
-    def _detect_corridor_oscillation(self):
-        if len(self.corridor_history) < 10:
-            return False
-
-        positions = list(self.corridor_history)[-10:]
-        positions = [p for p in positions if p is not None]
-
-        if len(positions) < 6:
-            return False
-        
-        x_coords = [float(pos[0]) for pos in positions]
-        y_coords = [float(pos[1]) for pos in positions]
-        
-        x_changes = sum(1 for i in range(1, len(x_coords)) if abs(x_coords[i] - x_coords[i-1]) > 5)
-        y_changes = sum(1 for i in range(1, len(y_coords)) if abs(y_coords[i] - y_coords[i-1]) > 5)
-
-        return (x_changes > 10 or y_changes > 10)
-    
+            
     def _detect_pacman_position_pixel(self, obs):
         """Detect Ms. Pacman position from pixels"""
         if len(obs.shape) == 3:  # RGB
@@ -408,6 +297,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.exploration_bonus = exploration_bonus
         self.stagnation_penalty = stagnation_penalty
         self.death_penalty = death_penalty
+        self.episode = -1
         
         self.visited_rooms = set()
         self.prev_position = None
@@ -417,6 +307,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.position_history = deque(maxlen=500)
         self.rnd_model = rnd_model
         self.device = rnd_model.device
+        self.score_best = 0
 
         self.alpha = alpha
 
@@ -428,6 +319,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.lives = self._get_lives(obs)
         self.total_reward = 0
         self.position_history.clear()
+        self.episode += 1
         return obs, info
 
     def step(self, action):
@@ -465,18 +357,26 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.lives = lives
 
         obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device)
-        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detatch().cpu().numpy()[0]
+        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
         r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
 
         modified_reward += self.alpha * r_i
 
+
         self.total_reward += reward
+
+        if self.total_reward > self.score_best:
+            self.score_best = self.total_reward
         info.update({
             "modified_reward": modified_reward,
             "score": score,
             "room": room,
             "position": position,
             "lives": lives,
+            'total_reward': self.total_reward,
+            'original_reward': reward,
+            'score best': self.score_best,
+            'episode' : self.episode
 
         })
 
@@ -520,7 +420,7 @@ class VectorEnvVisualizer:
         self.best_reward = 0
         self.best_rewards_x = []
         self.best_reward_y = []
-        
+
         if save_videos:
             os.makedirs(save_dir, exist_ok=True)
         
@@ -646,9 +546,9 @@ class VectorEnvVisualizer:
 
             self.ax4.clear()
             self.ax4.scatter(self.best_rewards_x, self.best_reward_y)
-            self.ax4.set_title('Best IQM across time')
+            self.ax4.set_title('IQM across time')
             self.ax4.set_xlabel('step')
-            self.ax4.set_ylabel('best IQM')
+            self.ax4.set_ylabel('IQM')
 
 
             self.ax5.clear()
@@ -704,11 +604,11 @@ def make_envs(env_name, num_envs, args, train=True, rnd_model=None):
     if 'Pacman' in args.env_name:
         envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper) for _ in range(num_envs)])
     else:
-        envs = gym.vector.SyncVectorEnv(make_env(env_name, rnd_model, obs, MontezumaRewardWrapper))
+        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper) for _ in range(num_envs)])
     envs.reset(seed=args.seed)
     return envs
 
-def take_action(a, eps):
+def take_action(a, eps, env):
     dist = torch.distributions.Categorical(a)
     if np.random.rand() < eps:
         action = dist.sample()
@@ -716,6 +616,7 @@ def take_action(a, eps):
         action = torch.argmax(a, dim=-1)
     logp = dist.log_prob(action)
     entropy = dist.entropy()
+
     return action.cpu().detach().numpy(), logp, entropy
         
 

@@ -36,25 +36,27 @@ class RNDModel(nn.Module):
 
     def update_rms(self, rewards):
         # simple running mean/std (could also use Welford’s algorithm)
-        batch_mean = rewards.mean().item()
-        batch_var = rewards.var(unbiased=False).item()
-        m, v, n = self.running_mean.item(), self.running_var.item(), self.count
-        new_n = n + 1
-        new_m = m + (batch_mean - m) / new_n
-        new_v = v + (batch_var - v) / new_n
-        self.running_mean.fill_(new_m)
-        self.running_var.fill_(new_v)
-        self.count = new_n
-        self.running_mean
+        all_rewards = rewards.flatten()
+        batch_mean = all_rewards.mean().item()
+        batch_var = all_rewards.var(unbiased=False).item()
+        tot_count = all_rewards.shape[0] + self.count
+        self.running_mean = self.running_mean + (batch_mean - self.running_mean) * all_rewards.shape[0] / tot_count
+        self.running_var  = self.running_var + (batch_var - self.running_var) * all_rewards.shape[0] / tot_count
 
     def intrinsic_reward(self, x, normalize=False):
         pred, target = self.forward(x)
         # per-sample squared error
-        loss = F.mse_loss(pred, target, reduction="none").mean(dim=1)
+        loss = F.mse_loss(pred, target, reduction="none")
 
         if normalize:
+            if self.count < 1000:
+                self.update_rms(loss.detach())
+                self.count += 1
             self.update_rms(loss.detach())
-            std = self.running_var.sqrt() + 1e-8
-            return (loss - self.running_mean.to(self.device)) / std.to(self.device)
+
+
+            std = torch.clamp(self.running_var.sqrt(), min=0.1)  # Lower minimum
+            normalized = (loss - self.running_mean.to(self.device)) / std.to(self.device)
+            return torch.clamp(normalized.mean(), 0, 5)
         else:
-            return loss
+            return torch.clamp(loss.mean() / 10, 0, 100)
