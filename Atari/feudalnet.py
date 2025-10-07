@@ -217,10 +217,6 @@ class Worker(nn.Module):
         hidden = (u, cx)
 
         goals = torch.stack(goals).detach().sum(dim=0)
-        # weights = torch.exp(-0.02 * torch.arange(len(goals), dtype=torch.float, device=z.device))
-        # weights = weights / weights.sum()
-
-        # weighted_goals = torch.einsum('t,tbd->bd', weights.flip(0), goals)
         w = torch.tanh(self.phi(goals))
         value_est = self.critic(u)
 

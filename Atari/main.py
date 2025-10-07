@@ -23,13 +23,13 @@ parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
 parser.add_argument('--grad-clip', type=float, default=5,
                     help='Gradient clipping (recommended).')
-parser.add_argument('--entropy-coef', type=float, default=0.02,
+parser.add_argument('--entropy-coef', type=float, default=0.2,
                     help='Entropy coefficient to encourage exploration.')
 parser.add_argument('--mlp', type=int, default=0,
                     help='toggle to feedforward ML architecture')
 
 # SPECIFIC FEUDALNET PARAMETERS
-parser.add_argument('--time-horizon', type=int, default=40,
+parser.add_argument('--time-horizon', type=int, default=50,
                     help='Manager horizon (c)')
 parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
@@ -55,7 +55,7 @@ parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
                     default='feudal', help="which model to train")
-parser.add_argument('--decay-limit', type=float, default=2e-1,
+parser.add_argument('--decay-limit', type=float, default=1e-1,
                     help='how much eps decays')
 
 # QLEARN SPECIFIC PARAMETERS

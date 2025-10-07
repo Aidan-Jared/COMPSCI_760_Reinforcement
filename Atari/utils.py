@@ -170,9 +170,6 @@ class PacmanRewardWrapper(gym.Wrapper):
             death_penalty =  self.death_penalty
             modified_reward -= death_penalty
             self.lives = info['lives']
-            if self.lives == 0:
-                # modified_reward -= self.death_penalty * .5
-                self.score_history.append(self.total_reward)
 
         if self.score_best < self.total_reward:
                 self.score_best = self.total_reward
@@ -248,7 +245,7 @@ class PacmanRewardWrapper(gym.Wrapper):
         return None
 
 class MontezumaRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, exploration_bonus=0.1, stagnation_penalty=0.01, death_penalty=50, alpha =.1):
+    def __init__(self, env, rnd_model, exploration_bonus=0.1, stagnation_penalty=0.09, death_penalty=50, alpha =.1):
         super().__init__(env)
         self.exploration_bonus = exploration_bonus
         self.stagnation_penalty = stagnation_penalty
@@ -270,9 +267,10 @@ class MontezumaRewardWrapper(gym.Wrapper):
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
         self.visited_rooms.clear()
-        self.prev_position = self._get_position(obs)
-        self.prev_score = self._get_score(obs)
-        self.lives = self._get_lives(obs)
+        ram = self.env.unwrapped.ale.getRAM()
+        self.prev_position = self._get_position(ram)
+        self.prev_score = self._get_score(ram)
+        self.lives = self._get_lives(ram)
         self.total_reward = 0
         self.position_history.clear()
         self.episode += 1
@@ -280,10 +278,11 @@ class MontezumaRewardWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        ram = self.env.unwrapped.ale.getRAM()
 
-        score = self._get_score(obs)
-        position = self._get_position(obs)
-        lives = self._get_lives(obs)
+        score = self._get_score(ram)
+        position = self._get_position(ram)
+        lives = self._get_lives(ram)
 
         modified_reward = 0.0
 
@@ -293,7 +292,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.prev_score = score
 
         # Exploration: new room
-        room = self._get_room(obs)
+        room = self._get_room(ram)
         if room not in self.visited_rooms:
             self.visited_rooms.add(room)
             modified_reward += self.exploration_bonus
@@ -312,11 +311,12 @@ class MontezumaRewardWrapper(gym.Wrapper):
             modified_reward -= self.death_penalty
         self.lives = lives
 
-        obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device)
-        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
-        r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
+        if self.episode > 200:
+            obs_tensor = torch.tensor(ram, dtype=torch.float32, device=self.device)
+            r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
+            r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
 
-        modified_reward += self.alpha * r_i
+            modified_reward += self.alpha * r_i
 
 
         self.total_reward += reward
@@ -332,7 +332,8 @@ class MontezumaRewardWrapper(gym.Wrapper):
             'total_reward': self.total_reward,
             'original_reward': reward,
             'score best': self.score_best,
-            'episode' : self.episode
+            'episode' : self.episode,
+            'ram': ram
 
         })
 
@@ -547,7 +548,7 @@ class VectorEnvVisualizer:
 def make_env(env_name, rnd_model, obs, wrapper, rnd_delay):
     def _thunk():
         env = gym.make(env_name, render_mode='rgb_array', obs_type=obs)
-        env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1)
+        env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1,noop_max=60)
         if rnd_delay:
             env = wrapper(env, rnd_model, rnd_delay)
         else:
@@ -564,7 +565,7 @@ def make_envs(env_name, num_envs, args, train=True, rnd_model=None, rnd_delay = 
     if 'Pacman' in args.env_name:
         envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper, rnd_delay) for _ in range(num_envs)])
     else:
-        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper) for _ in range(num_envs)])
+        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper, rnd_delay) for _ in range(num_envs)])
     envs.reset(seed=args.seed)
     return envs
 
