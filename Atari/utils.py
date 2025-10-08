@@ -8,11 +8,11 @@ import torch
 import numpy as np
 
 import logging
-import os
+import os, platform, matplotlib
 import time
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
-import matplotlib.pyplot as plt
+
 import json
 # import cv2
 
@@ -580,3 +580,45 @@ def take_action(a, eps, env):
 
     return action.cpu().detach().numpy(), logp, entropy
         
+
+#========================================
+# Since I need to run the code through wsl for my gpu, I need to change some matplotlib settings. Hopefully this doesn't mess with anyone elses runtime 🙏
+#========================================
+
+def _is_wsl():
+    try:
+        if "WSL_DISTRO_NAME" in os.environ:
+            return True
+        rel = platform.release().lower()
+        if "microsoft" in rel or "wsl" in rel:
+            return True
+        # Fallback check
+        with open("/proc/version", "r") as f:
+            return "microsoft" in f.read().lower()
+    except Exception:
+        return False
+    
+def configure_matplotlib_for_wsl():
+    """Only tweak Matplotlib when running inside WSL."""
+    if not _is_wsl():
+        return  # don't touch teammates' environments
+
+    # If a GUI is available (WSLg or X server), prefer an interactive backend.
+    # Leave existing backend alone if it's already interactive.
+    current = matplotlib.get_backend().lower()
+    interactive_backends = {"tkagg", "qt5agg", "gtk3agg", "macosx", "wxagg"}
+    if current not in interactive_backends:
+        # Try TkAgg first, then Qt5Agg
+        for candidate in ("TkAgg", "Qt5Agg"):
+            try:
+                matplotlib.use(candidate, force=True)
+                break
+            except Exception:
+                continue
+
+if _is_wsl:
+    configure_matplotlib_for_wsl()
+    import matplotlib.pyplot as plt
+    plt.ion()
+else:
+    import matplotlib.pyplot as plt

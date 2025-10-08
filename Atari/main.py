@@ -9,7 +9,7 @@ from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=1e-3,
+parser.add_argument('--lr', type=float, default=5e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
@@ -129,12 +129,17 @@ def experiment(args):
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
     else:
+        '''save_data = torch.load("models/MsPacman-v5_feudalv3_seed=0_step=7750000.pt", weights_only=False)
+        args = save_data['args']
+        model_weights = save_data['model']
+        print(f"model weights: {model_weights}")'''
         feudalnet = Qlearn(
             input_dim=envs.single_observation_space.shape,
             hidden_dim= args.hidden_dim_manager,
             n_actions=n_actions,
             device=device,
             mlp=args.mlp,
+            #init_weights=model_weights
         )
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     

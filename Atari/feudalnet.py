@@ -91,6 +91,7 @@ class FeudalNetwork(nn.Module):
             self.worker.eps *= self.decay
         except:
             self.worker.eps *= self.decay
+            
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp = False):
         super().__init__()
@@ -243,7 +244,12 @@ class Worker(nn.Module):
             mask = mask * masks[t - i]
         r_i = r_i.detach()
         return r_i / self.c
-    
+
+def _to_numpy(x):
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().float().numpy()
+    return np.asarray(x, dtype=np.float32)
+  
 class Preprocessor:
     def __init__(self, shape, device='cpu', mlp=False):
         self.mlp = mlp
@@ -256,7 +262,12 @@ class Preprocessor:
 
     def __call__(self, x):
         if not self.mlp:
-            x = np.asarray(x).reshape(x.shape[0], *self.shape)
+            if isinstance(x, torch.Tensor):
+                x = x.detach().cpu().numpy()
+            else:
+                x = np.asarray(x)
+                
+            x = x.reshape(x.shape[0], *self.shape)
             self.rms.update(x)
             
             # Check if std is reasonable
@@ -267,14 +278,14 @@ class Preprocessor:
                 x_normalized = (x - self.rms.mean) / std
             
             # CRITICAL: Clip to reasonable range
-            # x_normalized = np.clip(x_normalized, -3.0, 3.0)
+            x_normalized = np.clip(x_normalized, -3.0, 3.0)
             
             return torch.FloatTensor(x_normalized).to(self.device)
         else:
             return torch.FloatTensor(x).to(self.device)
 
 class Qlearn(nn.Module):
-    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):
+    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp, init_weights=None):
         super().__init__()
         self.d = int(hidden_dim)
         self.n_actions = int(n_actions)
@@ -297,8 +308,10 @@ class Qlearn(nn.Module):
             nn.ReLU(),
             nn.Linear(h3, self.n_actions),
         )
-
-        self.apply(self._weight_init)
+        if init_weights:
+            self.load_state_dict(init_weights)
+        else:
+            self.apply(self._weight_init)
         self.to(device)
 
     @staticmethod
