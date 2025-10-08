@@ -265,17 +265,28 @@ class Preprocessor:
         self.rms = RunningMeanStd(shape = (1,) + self.shape)
 
     def __call__(self, x):
-        if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).to(self.device)
-        elif isinstance(x, torch.Tensor):
-            x = x.to(self.device)
-        # if pixel input and uint8, scale once
-        if x.dtype == torch.uint8:
-            x = x.float() / 255.0
+        if not self.mlp:
+            if isinstance(x, torch.Tensor):
+                x = x.detach().cpu().numpy()
+            else:
+                x = np.asarray(x)
+                
+            x = x.reshape(x.shape[0], *self.shape)
+            self.rms.update(x)
+            
+            # Check if std is reasonable
+            std = np.sqrt(self.rms.var + 1e-5)
+            if std.mean() < 1e-3:  # Too small, use simple normalization
+                x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+            else:
+                x_normalized = (x - self.rms.mean) / std
+            
+            # CRITICAL: Clip to reasonable range
+            x_normalized = np.clip(x_normalized, -3.0, 3.0)
+            
+            return torch.FloatTensor(x_normalized).to(self.device)
         else:
-            x = x.float()
-        # any RunningMeanStd updates should use torch ops and not break autograd
-        return x
+            return torch.FloatTensor(x).to(self.device)
 
 class Qlearn(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_actions, device, mlp, init_weights=None):

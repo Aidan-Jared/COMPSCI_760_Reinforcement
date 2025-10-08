@@ -270,7 +270,7 @@ class QModelTrainer(Train):
         self.max_steps = getattr(self.args, "max_steps", 1_000_000)
         self.num_workers = self.envs.num_envs
         self.num_steps = getattr(self.args, "num_steps", 256)
-        self.batch_size = getattr(self.args, "batch_size", 32)
+        self.batch_size = getattr(self.args, "batch_size", 64)
         self.replay_buffer_capacity = getattr(self.args, "replay_buffer_capacity", 500_000)
         self.replay_buffer_min_size = getattr(self.args, "replay_buffer_min_size", 10_000)
         self.replay_buffer = ReplayBuffer(self.replay_buffer_capacity)
@@ -289,7 +289,7 @@ class QModelTrainer(Train):
         mask = np.random.rand(b) < eps
         random_act = np.random.randint(0, n_actions, size=b)
         return np.where(mask, random_act, greedy)
-
+     
     def train_qmodel(self):
         args = self.args
         device = self.device
@@ -331,9 +331,10 @@ class QModelTrainer(Train):
         # Main training loop
         while step < self.max_steps:
             # Collect data with epsilon-greedy policy
-            qvals = self.model(x)                             # x: np.ndarray from vector env
-            save_steps = list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
+            qvals = self.model(x)
+
             actions = self._epsilon_greedy(qvals, eps, self.model.n_actions)
+            save_steps = list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
 
             x_next, reward, terminated, truncated, infos = self.envs.step(actions)
 
