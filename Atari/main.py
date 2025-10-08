@@ -33,7 +33,7 @@ parser.add_argument('--time-horizon', type=int, default=50,
                     help='Manager horizon (c)')
 parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
-parser.add_argument('--hidden-dim-worker', type=int, default=128,
+parser.add_argument('--hidden-dim-worker', type=int, default=256,
                     help='Hidden dim for worker (k)')
 parser.add_argument('--gamma-w', type=float, default=0.95,
                     help="discount factor worker")
@@ -49,7 +49,7 @@ parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalv5',
+parser.add_argument('--run-name', type=str, default='feudalattn',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
@@ -65,7 +65,7 @@ parser.add_argument('--eps-decay-freq', type=int, default=1280, help='steps betw
 
 parser.add_argument('--maximal', type=bool, default=False, help='use maximal reward')
 
-parser.add_argument('--load-file', type=str, default=None, help='file to load to continue training')
+parser.add_argument('--load-file', type=str, default='models/MsPacman-v5_feudalv5_seed=0_step=20008000.pt', help='file to load to continue training')
 
 args = parser.parse_args()
 
@@ -82,12 +82,14 @@ def experiment(args):
         torch.backends.cudnn.benchmark = False
     
     rnd_delay = None
+    load = False
     if args.load_file:
-        save_data = torch.load(args.model, weights_only=False)
+        save_data = torch.load(args.load_file, weights_only=False)
         args = save_data['args']
         rnd_weights = save_data['rnd']
         rnd_model.load_state_dict(rnd_weights)
         rnd_delay = 0
+        load = True
 
     envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model, rnd_delay=rnd_delay)
     n_actions = envs.single_action_space.n
@@ -136,10 +138,11 @@ def experiment(args):
         )
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
     
-    if args.load_file:
+    if load:
         model_weights = save_data['model']
         feudalnet.load_state_dict(model_weights)
         args.max_steps -= save_data['step']
+        optimizer.load_state_dict(save_data['optim'])
     
     train = Train(args, feudalnet, optimizer, envs, logger, rnd_model)
     
