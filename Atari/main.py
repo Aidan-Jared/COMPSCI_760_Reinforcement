@@ -49,12 +49,12 @@ parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalattn',
+parser.add_argument('--run-name', type=str, default='qmodel',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
-                    default='feudal', help="which model to train")
+                    default='qlearn', help="which model to train")
 parser.add_argument('--decay-limit', type=float, default=1e-1,
                     help='how much eps decays')
 
@@ -65,7 +65,7 @@ parser.add_argument('--eps-decay-freq', type=int, default=1280, help='steps betw
 
 parser.add_argument('--maximal', type=bool, default=False, help='use maximal reward')
 
-parser.add_argument('--load-file', type=str, default='models/MsPacman-v5_feudalv5_seed=0_step=20008000.pt', help='file to load to continue training')
+parser.add_argument('--load-file', type=str, default=None, help='file to load to continue training')
 
 args = parser.parse_args()
 

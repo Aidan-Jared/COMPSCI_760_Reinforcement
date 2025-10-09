@@ -278,7 +278,7 @@ class Preprocessor:
                 x_normalized = (x - self.rms.mean) / std
             
             # CRITICAL: Clip to reasonable range
-            x_normalized = np.clip(x_normalized, -3.0, 3.0)
+            # x_normalized = np.clip(x_normalized, -3.0, 3.0)
             
             return torch.FloatTensor(x_normalized).to(self.device)
         else:
