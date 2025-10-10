@@ -276,23 +276,23 @@ class Preprocessor:
             else:
                 x = np.asarray(x)
                 
-            x = x.reshape(x.shape[0], *self.shape)
-            self.rms.update(x)
+            # x = x.reshape(x.shape[0], *self.shape)
+            # self.rms.update(x)
             
-            # Check if std is reasonable
-            std = np.sqrt(self.rms.var + 1e-5)
-            if std.mean() < 1e-3:  # Too small, use simple normalization
-                x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
-            else:
-                x_normalized = (x - self.rms.mean) / std
+            # # Check if std is reasonable
+            # std = np.sqrt(self.rms.var + 1e-5)
+            # if std.mean() < 1e-3:  # Too small, use simple normalization
+            #     x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+            # else:
+            #     x_normalized = (x - self.rms.mean) / std
             
             # CRITICAL: Clip to reasonable range
             # x_normalized = np.clip(x_normalized, -3.0, 3.0)
 
-            if x_normalized.shape[2] == 4:
-                x_normalized = np.transpose(x_normalized, (0, 2, 1, 3))
+            if x.shape[2] == 4 and x.ndim == 4:
+                x = np.transpose(x, (0, 2, 1, 3))
             
-            return torch.FloatTensor(x_normalized).to(self.device)
+            return torch.FloatTensor(x).to(self.device)
         else:
             return torch.FloatTensor(x).to(self.device)
 
