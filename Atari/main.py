@@ -15,7 +15,7 @@ parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
 parser.add_argument('--num-workers', type=int, default=8,
                     help='number of parallel environments to run')
-parser.add_argument('--num-steps', type=int, default=1000,
+parser.add_argument('--num-steps', type=int, default=500,
                     help='number of steps the agent takes before updating')
 parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
@@ -31,7 +31,7 @@ parser.add_argument('--mlp', type=int, default=0,
 # SPECIFIC FEUDALNET PARAMETERS
 parser.add_argument('--time-horizon', type=int, default=50,
                     help='Manager horizon (c)')
-parser.add_argument('--hidden-dim-manager', type=int, default=256,
+parser.add_argument('--hidden-dim-manager', type=int, default=512,
                     help='Hidden dim (d)')
 parser.add_argument('--hidden-dim-worker', type=int, default=256,
                     help='Hidden dim for worker (k)')

@@ -103,17 +103,19 @@ class Perception(nn.Module):
                 nn.Linear(64, d),
                 nn.LeakyReLU(.01),)
         else:
-            w1 = (input_dim[0] - 8) / 4 + 1
-            h1 = (input_dim[1] - 8) / 4 + 1
-            w2 = int((w1 - 4) / 2 + 1)
-            h2 = int((h1 - 4) / 2 + 1)
+            # w1 = (input_dim[0] - 8) / 4 + 1
+            # h1 = (input_dim[1] - 8) / 4 + 1
+            # w2 = int((w1 - 4) / 2 + 1)
+            # h2 = int((h1 - 4) / 2 + 1)
             self.percept = nn.Sequential(
-                nn.Conv2d(3,16, kernel_size=8, stride=4),
+                nn.Conv2d(4,32, kernel_size=8, stride=4),
                 nn.ReLU(),
-                nn.Conv2d(16,32, kernel_size=4, stride=2),
+                nn.Conv2d(32,64, kernel_size=4, stride=2),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, kernel_size=3, stride=1),
                 nn.ReLU(),
                 nn.modules.Flatten(),
-                nn.Linear(32*w2 * h2, d),
+                nn.Linear(64* 7 * 7, d),
                 nn.ReLU()
             )
     
@@ -286,6 +288,9 @@ class Preprocessor:
             
             # CRITICAL: Clip to reasonable range
             # x_normalized = np.clip(x_normalized, -3.0, 3.0)
+
+            if x_normalized.shape[2] == 4:
+                x_normalized = np.transpose(x_normalized, (0, 2, 1, 3))
             
             return torch.FloatTensor(x_normalized).to(self.device)
         else:

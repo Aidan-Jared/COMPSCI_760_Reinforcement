@@ -1,5 +1,5 @@
 import gymnasium as gym
-from gymnasium.wrappers import AtariPreprocessing, TransformReward
+from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 import ale_py
 gym.register_envs(ale_py)
 from collections import deque, Counter
@@ -548,8 +548,9 @@ class VectorEnvVisualizer:
 
 def make_env(env_name, rnd_model, obs, wrapper, rnd_delay):
     def _thunk():
-        env = gym.make(env_name, render_mode='rgb_array', obs_type=obs)
-        env = AtariPreprocessing(env, grayscale_obs=False, scale_obs=True, frame_skip=1,noop_max=60)
+        env = gym.make(env_name, render_mode='rgb_array', obs_type=obs, frameskip=1)
+        env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True, frame_skip=4,noop_max=60, screen_size=84)
+        env = FrameStackObservation(env, 4)
         if rnd_delay:
             env = wrapper(env, rnd_model, rnd_delay)
         else:
