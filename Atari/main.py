@@ -49,7 +49,7 @@ parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='qmodel',
+parser.add_argument('--run-name', type=str, default='qlearnv2',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')

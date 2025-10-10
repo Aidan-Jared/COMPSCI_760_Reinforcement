@@ -1,14 +1,11 @@
 import copy
-import random
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import time
 import os
 from utils import VectorEnvVisualizer, Storage, take_action
 from feudalnet import feudal_loss
-from collections import deque
 
 
 
@@ -115,6 +112,7 @@ class Train:
                         'optim': self.optimizer.state_dict(),
                         'step': step},
                         f'models/{self.args.env_name[4:]}_{self.args.run_name}_step={step}.pt')
+                    self.logger.save()
                     save_steps.pop(0)
         self.envs.close()
         torch.save({
@@ -239,33 +237,6 @@ class Train:
         )
         q_model_trainer.train_qmodel()
 
-# A simple replay buffer class
-class ReplayBuffer:
-    def __init__(self, capacity):
-        self.buffer = deque(maxlen=capacity)
-
-    def add(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
-
-    def sample(self, batch_size):
-        if len(self.buffer) < batch_size:
-            return None
-        
-        transitions = random.sample(self.buffer, batch_size)
-        
-        states, actions, rewards, next_states, dones = zip(*transitions)
-        
-        states = np.stack(states)
-        actions = np.array(actions)
-        rewards = np.array(rewards).astype(np.float32)
-        next_states = np.stack(next_states)
-        dones = np.array(dones)
-
-        return states, actions, rewards, next_states, dones
-    
-    def __len__(self):
-        return len(self.buffer)
-    
 class QModelTrainer(Train):
     def __init__(self, **kwargs):
         super().__init__(**kwargs) #args, model, optimizer, envs, logger, device
@@ -273,11 +244,6 @@ class QModelTrainer(Train):
         self.max_steps = getattr(self.args, "max_steps", 1_000_000)
         self.num_workers = self.envs.num_envs
         self.num_steps = getattr(self.args, "num_steps", 256)
-        # self.batch_size = getattr(self.args, "batch_size", 64)
-        # self.rnd_optimizer = torch.optim.Adam(self.rnd.parameters(), 1e-3)
-        # self.replay_buffer_capacity = getattr(self.args, "replay_buffer_capacity", 500_000)
-        # self.replay_buffer_min_size = getattr(self.args, "replay_buffer_min_size", 10_000)
-        # self.replay_buffer = ReplayBuffer(self.replay_buffer_capacity)
 
 
     @torch.no_grad()
@@ -316,158 +282,118 @@ class QModelTrainer(Train):
         updates = 0
         
         visualizer = VectorEnvVisualizer(env_idx=0, save_videos=False)
-
-        # Initial fill of replay buffer with random actions
-        # print("Filling replay buffer...")
-        # while len(self.replay_buffer) < self.replay_buffer_min_size:
-            # 
-            #     actions = np.random.randint(0, self.model.n_actions, size=self.num_workers)
-            #     x_next, reward, terminated, truncated, info = self.envs.step(actions)
-            #     for i in range(self.num_workers):
-            #         mask = 1.0 - (terminated[i] + truncated[i])
-            #         self.replay_buffer.add(x[i], actions[i], reward[i], x_next[i], terminated[i] or truncated[i])
-            #     x = x_next
-            #     step += self.num_workers
-            #     if step % 5000 == 0:
-            #         print(f"Buffer size: {len(self.replay_buffer)}/{self.replay_buffer_min_size}")
-
-            # print("Replay buffer filled. Starting training...")
-            
-            # Main training loop
+        # Main training loop
         while step < self.max_steps:
-                storage = Storage(size=self.args.num_steps,
-                            keys=['qvals', 'actions', 'reward', 'next_si', 'dones'])
-                for i in range(self.num_steps):
-                    # Collect data with epsilon-greedy policy
-                    qvals = self.model(x)
+            storage = Storage(size=self.args.num_steps,
+                        keys=['qvals', 'actions', 'reward', 'next_si', 'dones'])
+            for _ in range(self.num_steps):
+                # Collect data with epsilon-greedy policy
+                qvals = self.model(x)
 
-                    actions = self._epsilon_greedy(qvals, eps, self.model.n_actions)
-                    save_steps = list(torch.arange(0, int(self.max_steps), int(self.max_steps) // 10).numpy())
+                actions = self._epsilon_greedy(qvals, eps, self.model.n_actions)
 
-                    x_next, reward, terminated, truncated, infos = self.envs.step(actions)
+                x_next, reward, terminated, truncated, infos = self.envs.step(actions)
 
-                    # ---- Correctly build transitions, using final_observation for dones
-                    dones = np.logical_or(terminated, truncated)
-                    final_obs = infos.get("final_observation", None)
-                    next_si = []
-                    for i in range(self.num_workers):
-                        next_si.append(final_obs[i] if (dones[i] and final_obs is not None) else x_next[i])
+                # ---- Correctly build transitions, using final_observation for dones
+                dones = np.logical_or(terminated, truncated)
+                final_obs = infos.get("final_observation", None)
+                next_si = []
+                for j in range(self.num_workers):
+                    next_si.append(final_obs[j] if (dones[j] and final_obs is not None) else x_next[j])
 
-                    storage.add({
-                        'qvals': qvals,
-                        'actions': torch.LongTensor(actions).unsqueeze(-1).to(self.device),
-                        'reward': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
-                        'next_si': torch.FloatTensor(np.array(next_si)).to(self.device),
-                        'dones': torch.BoolTensor(dones).unsqueeze(-1).to(self.device),
-                        'obs': torch.Tensor(infos['ram']).to(self.device),
-                    })
+                storage.add({
+                    'qvals': qvals,
+                    'actions': torch.LongTensor(actions).unsqueeze(-1).to(self.device),
+                    'reward': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
+                    'next_si': torch.FloatTensor(np.array(next_si)).to(self.device),
+                    'dones': torch.BoolTensor(dones).unsqueeze(-1).to(self.device),
+                    'obs': torch.Tensor(infos['ram']).to(self.device),
+                })
 
-                    x = x_next
-                    # x_next, reward, terminated, truncated, info = self.envs.step(actions)
+                x = x_next
+                # x_next, reward, terminated, truncated, info = self.envs.step(actions)
 
-                    # Make sure the logger populates info['total_reward'], etc. *before* you draw
-                    self.logger.log_episode(infos, step)
-                    if step % 160 == 0:
-                        visualizer.capture_frame(self.envs, step, actions, reward, terminated, truncated, infos)
+                # Make sure the logger populates info['total_reward'], etc. *before* you draw
+                self.logger.log_episode(infos, step)
+                if step % 160 == 0:
+                    visualizer.capture_frame(self.envs, step, actions, reward, terminated, truncated, infos)
 
-                    step += self.num_workers
+                step += self.num_workers
 
-                # Sample a batch from the replay buffer
-                # batch = self.replay_buffer.sample(self.batch_size)
-                # if batch is None:
-                #     continue
+            q_pred_all, actions_t, rewards_t, next_states_t, dones = storage.stack(
+                        ['qvals', 'actions', 'reward', 'next_si', 'dones'])
 
-                # states_np, actions_np, rewards_np, next_states_np, dones_np = batch
+            masks_t = dones.logical_not().flatten(0,1).float()
+
+            # 2) Targets
+            rewards_t = rewards_t.clip(-1,1)
+            with torch.no_grad():
+                # ---- Standard DQN target:
+                # q_next = target_net(next_states_t.flatten(0,1))                       # [B, A]
+                # q_next_max = q_next.max(dim=1, keepdim=True).values      # [B, 1]
+                # target = rewards_t.flatten(0,1) + gamma * masks_t * q_next_max        # [B, 1]
+
+                # ---- Double DQN target (recommended):
+                next_actions = self.model(next_states_t.flatten(0,1)).argmax(dim=1, keepdim=True)  # online picks
+                q_next_tgt = target_net(next_states_t.flatten(0,1)).gather(1, next_actions)        # target evaluates
+                target = rewards_t.flatten(0,1) + gamma * masks_t * q_next_tgt
+
+            # 3) Prediction: Q(s, a)
+            q_pred = q_pred_all.flatten(0,1).gather(1, actions_t.flatten(0,1))
+            
+            loss = F.smooth_l1_loss(q_pred, target)
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), grad_clip)
+            self.optimizer.step()
+            self.lr_scheduler.step()
+            updates += 1
+
+            obs_batch = torch.stack(storage.obs)
+
+            pred, target = self.rnd(obs_batch)
+
+            rnd_loss = F.mse_loss(pred, target)
+
+            self.rnd_optimizer.zero_grad()
+            rnd_loss.backward()
+            self.rnd_optimizer.step()
+
+            # Periodic hard target sync
+            if step % target_update == 0:
+                target_net.load_state_dict(self.model.state_dict())
+            
+            # Epsilon decay
+            if eps > self.args.decay_limit:
+                # reduce random exploration
+                eps *= self.args.decay
+                self.args.eps = eps
+
+            # Logging
+            with torch.no_grad():
+                avg_q = q_pred.mean().item()
+                avg_r = rewards_t.mean().item()
+                self.logger.log_scalars({
+                    "q_loss": loss.item(),
+                    "q_avg": avg_q,
+                    "reward/mean": avg_r,
+                    "train/epsilon": eps,
+                    "train/updates": updates,
+                }, step)
                 
-                # 1) Build tensors with correct dtype/device
-                #    If observations are pixels (uint8), cast to float32 and scale to [0,1].
-
-                q_pred_all, actions_t, rewards_t, next_states_t, dones = storage.stack(
-                            ['qvals', 'actions', 'reward', 'next_si', 'dones'])
-
-                # obs_is_uint8 = states_np.dtype == np.uint8
-
-                # states_t = torch.as_tensor(states_np, device=device, dtype=torch.float32)
-                # next_states_t = torch.as_tensor(next_states_np, device=device, dtype=torch.float32)
-                # if obs_is_uint8:
-                #     states_t      = states_t / 255.0
-                #     next_states_t = next_states_t / 255.0
-
-                # actions_t = torch.as_tensor(actions_np.reshape(-1, 1), device=device, dtype=torch.long)
-                # rewards_t = torch.as_tensor(rewards_np.reshape(-1, 1), device=device, dtype=torch.float32)
-                masks_t = dones.logical_not().flatten(0,1)
-                # masks_t   = torch.as_tensor(1.0 - dones_np.reshape(-1, 1), device=device, dtype=torch.float32)
-
-                # (Optional but common in Atari) Reward clipping for stability
-                # rewards_t = rewards_t.clamp_(-1.0, 1.0)
-
-                # 2) Targets
-                with torch.no_grad():
-                    # ---- Standard DQN target:
-                    q_next = target_net(next_states_t.flatten(0,1))                       # [B, A]
-                    q_next_max = q_next.max(dim=1, keepdim=True).values      # [B, 1]
-                    target = rewards_t.flatten(0,1) + gamma * masks_t * q_next_max        # [B, 1]
-
-                    # ---- Double DQN target (recommended):
-                    # next_actions = self.model(next_states_t).argmax(dim=1, keepdim=True)  # online picks
-                    # q_next_tgt = target_net(next_states_t).gather(1, next_actions)        # target evaluates
-                    # target = rewards_t + gamma * masks_t * q_next_tgt
-
-                # 3) Prediction: Q(s, a)
-                # q_pred_all = self.model(states_t)                     # [B, A]
-                q_pred = q_pred_all.flatten(0,1).gather(1, actions_t.flatten(0,1))          # [B, 1]
-                
-                loss = F.smooth_l1_loss(q_pred, target)
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), grad_clip)
-                self.optimizer.step()
-                updates += 1
-
-                obs_batch = torch.stack(storage.obs)
-
-                pred, target = self.rnd(obs_batch)
-
-                rnd_loss = F.mse_loss(pred, target)
-
-                self.rnd_optimizer.zero_grad()
-                rnd_loss.backward()
-                self.rnd_optimizer.step()
-
-                # Periodic hard target sync
-                if updates % target_update == 0:
-                    target_net.load_state_dict(self.model.state_dict())
-                
-                # Epsilon decay
-                if eps > eps_limit:
-                    eps_by_frame = lambda t: max(eps_limit, 1.0 - (1.0 - eps_limit) * (t / 1_000_000))  # linear to 1M steps
-                    eps = eps_by_frame(step)
-
-                # Logging
-                with torch.no_grad():
-                    avg_q = q_pred.mean().item()
-                    avg_r = rewards_t.mean().item()
-                    self.logger.log_scalars({
-                        "q_loss": loss.item(),
-                        "q_avg": avg_q,
-                        "reward/mean": avg_r,
-                        "train/epsilon": eps,
-                        "train/updates": updates,
-                    }, step)
-                    
-                # Checkpoint (simplified for brevity)
-                
-                if step % 50000 == 0:
-                    print(f"Checkpoint at step {step}")
-                    torch.save({
-                        'model': self.model.state_dict(),
-                        'args': self.args,
-                        'processor_mean': getattr(self.model, "preprocessor", None).rms.mean if hasattr(self.model, "preprocessor") else None,
-                        'optim': self.optimizer.state_dict()
-                    }, f'models/{self.args.env_name[4:] if len(self.args.env_name) > 4 else self.args.env_name}_{self.args.run_name}_step={step}.pt')
-                    self.logger.save()
-                    save_steps.pop(0)
+            # Checkpoint (simplified for brevity)
+            
+            if step % 50000 == 0:
+                print(f"Checkpoint at step {step}")
+                torch.save({
+                    'model': self.model.state_dict(),
+                    'rnd': self.rnd.state_dict(),
+                    'args': self.args,
+                    'processor_mean': getattr(self.model, "preprocessor", None).rms.mean if hasattr(self.model, "preprocessor") else None,
+                    'optim': self.optimizer.state_dict(),
+                }, f'models/{self.args.env_name[4:] if len(self.args.env_name) > 4 else self.args.env_name}_{self.args.run_name}_step={step}.pt')
+                self.logger.save()
 
         self.envs.close()
         # Final save

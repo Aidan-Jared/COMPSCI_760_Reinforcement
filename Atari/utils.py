@@ -116,11 +116,12 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.episode = -1
         self.new_best = False
 
+        self.rnd_delay = rnd_delay
+
         if rnd_model:
             self.rnd_model = rnd_model
             self.alpha = alpha
             self.device = rnd_model.device
-            self.rnd_delay = rnd_delay
         else:
             self.rnd_model = None
     

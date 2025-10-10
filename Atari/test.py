@@ -1,7 +1,7 @@
 import argparse
 import torch
 from feudaltransformer import FeudalTransformer
-from feudalnet import FeudalNetwork
+from feudalnet import FeudalNetwork, Qlearn
 import gymnasium as gym
 from utils import make_envs, take_action, Storage, VectorEnvVisualizer
 import ale_py
@@ -10,7 +10,7 @@ import json
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 
-parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudalv4_seed=0_step=10008000.pt',
+parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudalv5_seed=0_step=10008000.pt',
                     help='path to model save data')
 
 arg = parser.parse_args()
@@ -23,6 +23,15 @@ def test_feudal(model, args, envs, iter):
     goals, states, masks = model.init_obj()
     step = 0 
     x, info = envs.reset()
+    if iter == 0:
+            torch.onnx.export(
+                model,
+                (torch.as_tensor(x), goals, states, masks[-1]),
+                'model.feudalModel.onnx',
+                input_names=['current_state', 'goals', 'states', 'mask'],
+                output_names= ['action_dist', 'goals', 'states', 'value_m', 'value_w'],
+                dynamo=True
+            )
     while not terminated and not truncated:
         action_dist, goals, states, value_m, value_w = model(x, goals, states, masks[-1])
         action = torch.argmax(action_dist, dim=-1).cpu()
@@ -33,16 +42,34 @@ def test_feudal(model, args, envs, iter):
             visualizer.capture_frame(envs, step, action, reward, terminated, truncated, info)
         step += 1
         total_reward = info['total_reward']
-    
-    # if iter == 0:
-    #         torch.onnx.export(
-            #     model,
-            #     (x, goals, states, masks[-1]),
-            #     'model.feudalModel.onnx',
-            #     input_names=['current_state', 'goals', 'states', 'mask'],
-            #     dynamo=True
-            # )
 
+    return total_reward
+
+
+def test_qlearn(model, args, envs, iter):
+    terminated, truncated = False, False
+    total_reward = 0
+    step = 0 
+    x, info = envs.reset()
+    if iter == 0:
+        torch.onnx.export(
+            model,
+            torch.as_tensor(x),
+            'model.qModel.onnx',
+            input_names=['current_state'],
+            output_names= ['qvalues'],
+            dynamo=True
+        )
+    while not terminated and not truncated:
+        action_dist = model(x)
+        action = torch.argmax(action_dist, dim=-1).cpu()
+        # action = torch.multinomial(action_dist, num_samples=1).cpu().numpy()[0]
+        # action, logp, entropy = take_action(action_dist)
+        x, reward, terminated, truncated, info = envs.step(action)
+        if step % 4 == 1:
+            visualizer.capture_frame(envs, step, action, reward, terminated, truncated, info)
+        step += 1
+        total_reward = info['total_reward']
     return total_reward
     
 
@@ -70,18 +97,15 @@ if __name__ == "__main__":
         model.load_state_dict(model_weights)
         model.to(device)
         model.eval()
-    elif args.model =='feudalTransformer':
-        model = FeudalTransformer(
-            num_workers=args.num_workers,
+    elif args.model =='qlearn':
+        model = Qlearn(
             input_dim=envs.single_observation_space.shape,
-            hidden_dim_manager=args.hidden_dim_manager,
-            hidden_dim_worker=args.hidden_dim_worker,
+            hidden_dim= args.hidden_dim_manager,
             n_actions=envs.single_action_space.n,
-            time_horizon=args.time_horizon,
-            dilation=args.dilation,
             device=device,
             mlp=args.mlp,
-            args=args)
+            #init_weights=model_weights
+        )
         model.load_state_dict(model_weights)
         model.to(device)
         model.eval()
@@ -92,8 +116,8 @@ if __name__ == "__main__":
         for i in range(100):
             if args.model == 'feudal':
                 reward = test_feudal(model, args, envs, i)
-            elif args.model =='feudalTransformer':
-                pass
+            elif args.model =='qlearn':
+                reward = test_qlearn(model, args, envs, i)
 
             scores[i] = reward[0]
             print(reward)

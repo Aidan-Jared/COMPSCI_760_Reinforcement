@@ -261,6 +261,13 @@ class Preprocessor:
         self.rms = RunningMeanStd(shape = (1,) + self.shape)
 
     def __call__(self, x):
+        if torch.onnx.is_in_onnx_export():
+            if not isinstance(x, torch.Tensor):
+                x = torch.as_tensor(x, dtype=torch.float64)
+            if not self.mlp:
+                x = x.reshape(x.shape[0], *self.shape)
+            return x.to(self.device)
+        
         if not self.mlp:
             if isinstance(x, torch.Tensor):
                 x = x.detach().cpu().numpy()
@@ -331,13 +338,16 @@ class Qlearn(nn.Module):
     def act(self, obs, eps: float = 0.05):
         # Ensure batch dimension
         single = False
+
+        # convert numpy to tensor early
         if not torch.is_tensor(obs):
-            # Preprocessor can handle numpy; just keep flag for output shape
-            pass
+            obs = torch.as_tensor(obs, device=self.device, dtype=torch.float32)
+            single = (obs.ndim == 3) or (obs.ndim == 1)
         else:
             single = (obs.dim() == 3) or (obs.dim() == 1)
 
         q = self.forward(obs if not single else obs.unsqueeze(0))
+
         if eps > 0 and torch.rand(1, device=q.device).item() < eps:
             a = torch.randint(self.n_actions, (q.size(0),), device=q.device)
         else:
@@ -386,6 +396,9 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
         state_goal_cosines, goal_entropy, goal_q = storage.stack(
             ['r_i', 'v_m', 'v_w', 'ret_w', 'ret_m',
              'logp', 'entropy', 's_goal_cos', 'goal_entropy', 'goal_q'])
+    
+    # rewards_intrinsic.multinomial(64)
+    # idx = rewards_intrinsic.multi
 
     # Calculate advantages, size B x T
     r_i = (rewards_intrinsic - rewards_intrinsic.mean()) / (rewards_intrinsic.std() + 1e-8)
