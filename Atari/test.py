@@ -10,7 +10,7 @@ import json
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 
-parser.add_argument('--model', type=str, default='models/MsPacman-v5_feudalv5_seed=0_step=10008000.pt',
+parser.add_argument('--model', type=str, default='models/MsPacman-v5_qlearnv2_seed=0_step=10004176.pt',
                     help='path to model save data')
 
 arg = parser.parse_args()

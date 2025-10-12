@@ -6,6 +6,7 @@ from collections import deque, Counter
 
 import torch
 import numpy as np
+import scipy.stats as stats
 
 import logging
 import os, platform, matplotlib
@@ -55,10 +56,16 @@ class Logger:
         if info is not None:
             self.n_eps += 1
             time_expired = (time.time()-self.start_time) / 60 / 60
-            self.log[self.n_eps] = {'total_reward' : info['total_reward'].tolist(), 'episode_frame_number': info['episode_frame_number'].tolist(), 'time_expired': time_expired}
-            # logging.info(f"> ep = {self.n_eps} | total steps = {step}"
-            #                  f" | reward = {reward} | length = {length}"
-            #                  f" | hours = {time_expired:.3f}")
+            size = len(info['total_reward'])
+            quarter = size // 4
+            IQM = np.median(np.sort(info['total_reward'])[quarter:-quarter])
+            if IQM != 0:
+                std = np.std(info['total_reward'], ddof=1)
+                ci = stats.t.interval(.95, df = size - 1, loc= IQM, scale = std) / np.sqrt(size)
+                self.log[self.n_eps] = {'IQM' : IQM, 'min_score' : np.min(info['total_reward']), 'max_score' : np.max(info['total_reward']), 'score_std': std, '95_ci': ci.tolist(), 'frame_number': float(info['frame_number'][0]), 'time_expired': time_expired}
+                # logging.info(f"> ep = {self.n_eps} | total steps = {step}"
+                #                  f" | reward = {reward} | length = {length}"
+                #                  f" | hours = {time_expired:.3f}")
     
     def save(self):
         with open(f'logs/{self.log_name}', 'w') as r:
