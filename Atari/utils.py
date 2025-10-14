@@ -1,18 +1,19 @@
 import gymnasium as gym
-from gymnasium.wrappers import AtariPreprocessing, TransformReward
+from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 import ale_py
 gym.register_envs(ale_py)
 from collections import deque, Counter
 
 import torch
 import numpy as np
+import scipy.stats as stats
 
 import logging
-import os
+import os, platform, matplotlib
 import time
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
-import matplotlib.pyplot as plt
+
 import json
 # import cv2
 
@@ -55,10 +56,16 @@ class Logger:
         if info is not None:
             self.n_eps += 1
             time_expired = (time.time()-self.start_time) / 60 / 60
-            self.log[self.n_eps] = {'total_reward' : info['total_reward'].tolist(), 'episode_frame_number': info['episode_frame_number'].tolist(), 'time_expired': time_expired}
-            # logging.info(f"> ep = {self.n_eps} | total steps = {step}"
-            #                  f" | reward = {reward} | length = {length}"
-            #                  f" | hours = {time_expired:.3f}")
+            size = len(info['total_reward'])
+            quarter = size // 4
+            IQM = np.median(np.sort(info['total_reward'])[quarter:-quarter])
+            if IQM != 0:
+                std = np.std(info['total_reward'], ddof=1)
+                ci = stats.t.interval(.95, df = size - 1, loc= IQM, scale = std) / np.sqrt(size)
+                self.log[self.n_eps] = {'IQM' : IQM, 'min_score' : np.min(info['total_reward']), 'max_score' : np.max(info['total_reward']), 'score_std': std, '95_ci': ci.tolist(), 'frame_number': float(info['frame_number'][0]), 'time_expired': time_expired}
+                # logging.info(f"> ep = {self.n_eps} | total steps = {step}"
+                #                  f" | reward = {reward} | length = {length}"
+                #                  f" | hours = {time_expired:.3f}")
     
     def save(self):
         with open(f'logs/{self.log_name}', 'w') as r:
@@ -102,13 +109,10 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .1, stagnation_penalty=.4, death_penalty=4, pellet_bonus=1, stagnation_penalty_enable = True):
+    def __init__(self, env, rnd_model, alpha = .01, death_penalty=50, rnd_delay=20):
         super().__init__(env)
 
-        self.pellet_bonus = pellet_bonus
         self.death_penalty = death_penalty
-        self.stagnation_penalty = stagnation_penalty
-        self.stagnation_penalty_enable = stagnation_penalty_enable
         self.ram = self._check_ram_observation()
         self.lives = 0
 
@@ -117,15 +121,16 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.prev_positon = None
         self.score_best = 0
         self.episode = -1
-        self.position_history = deque(maxlen=200)
-        self.action_history = deque(maxlen=100)
-        self.score_history = deque(maxlen=25)
-        self.score_history.append(0)
         self.new_best = False
 
-        self.rnd_model = rnd_model
-        self.alpha = alpha
-        self.device = rnd_model.device
+        self.rnd_delay = rnd_delay
+
+        if rnd_model:
+            self.rnd_model = rnd_model
+            self.alpha = alpha
+            self.device = rnd_model.device
+        else:
+            self.rnd_model = None
     
     def _check_ram_observation(self):
         if  self.env.spec.kwargs['obs_type'] == 'ram':
@@ -144,112 +149,67 @@ class PacmanRewardWrapper(gym.Wrapper):
         self.position_history = deque(maxlen=200)
         self.action_history = deque(maxlen=100)
         self.new_best = False
+        ram = self.env.unwrapped.ale.getRAM()
+        info['ram'] = ram
         
         return obs, info
     
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        ram = self.env.unwrapped.ale.getRAM()
         current_score = self.total_reward + reward
         self.total_reward += reward
-        current_position = self._get_position(obs)
-        stagnate = True
+        # current_position = self._get_position(ram)
 
 
         modified_reward = reward
         if reward == 10:
             # reward pellet collection
-             modified_reward = 1
+             modified_reward = 10
         if reward == 50:
-            modified_reward = 5
+            modified_reward = 20
         if reward == 100:
-            modified_reward = 10
+            modified_reward = 25
         if reward >= 200:
-            modified_reward = 15
-        # if reward == 100:
-        #     modified_reward = 20 * self.pellet_bonus
-        # if reward >= 200:
-        #     modified_reward = 25 * self.pellet_bonus
-
-        if current_position not in self.position_history:
-            # Reward new positions
-            modified_reward += .5
-            stagnate = False
-        self.position_history.append(current_position)
-
-        stagnation_penalty = 0
-
-
-        # penalty for not moving around
-        # if self.episode > 200:
-        #     self.action_history.append(action)
-        #     action_count = self.action_history.count(action)
-        #     if action_count < 100:
-        #         stagnation_penalty = 0
-        #     else:
-                    
-        #         stagnation_penalty = .1 * (50* action_count) / len(self.action_history)
-    
-        #     modified_reward -= stagnation_penalty
-
-
-        # if self.stagnation_penalty_enable and current_position and stagnate and current_position != (88,98):
-        #     # penalty for not moving around
-        #     position_count = self.position_history.count(current_position)
-        #     if position_count < 3:
-        #         stagnation_penalty = 0
-        #     else:
-                
-        #         stagnation_penalty = (position_count) / len(self.position_history)
-    
-        #     modified_reward -= stagnation_penalty
+            modified_reward = 30
 
         if info['lives'] < self.lives :
             # penalty for death
             death_penalty =  self.death_penalty
             modified_reward -= death_penalty
             self.lives = info['lives']
-            if self.lives == 0:
-                # modified_reward -= self.death_penalty * .5
-                self.score_history.append(self.total_reward)
-            # alive reward
-        
-        if max(self.score_history) < self.total_reward:
-            # reward for new high score
-        #     if self.episode > 1:
-        #         modified_reward += .1
-            if self.score_best < self.total_reward:
+
+        if self.score_best < self.total_reward:
                 self.score_best = self.total_reward
 
-
-        if self.episode > 200:
-            obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+        if self.episode > self.rnd_delay and self.rnd_model:
+            obs_tensor = torch.tensor(ram, dtype=torch.float32, device=self.device).unsqueeze(0)
             r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
 
             modified_reward += self.alpha * r_i.item()
         
 
-        # modified_reward /= 10
-
 
         self.prev_score = current_score
-        self.prev_positon = current_position
+        # self.prev_positon = current_position
 
 
         info.update({
             'total_reward': self.total_reward,
             'original_reward': reward,
             'modified_reward': modified_reward,
-            'position': current_position,
+            # 'position': current_position,
             'score': current_score,
             'using_ram': self.ram,
             'episode': self.episode,
-            'score best': self.score_best
+            'score best': self.score_best,
+            'ram': ram
         })
 
         return obs, modified_reward, terminated, truncated, info
     
     def _get_position(self, obs):
-        if self.ram and len(obs) >= 128:
+        if len(obs) >= 128:
             try:
                 x = obs[10]
                 y = obs[16]
@@ -293,7 +253,7 @@ class PacmanRewardWrapper(gym.Wrapper):
         return None
 
 class MontezumaRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, exploration_bonus=0.1, stagnation_penalty=0.01, death_penalty=50, alpha =.1):
+    def __init__(self, env, rnd_model, exploration_bonus=0.1, stagnation_penalty=0.09, death_penalty=50, alpha =.1):
         super().__init__(env)
         self.exploration_bonus = exploration_bonus
         self.stagnation_penalty = stagnation_penalty
@@ -315,9 +275,10 @@ class MontezumaRewardWrapper(gym.Wrapper):
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
         self.visited_rooms.clear()
-        self.prev_position = self._get_position(obs)
-        self.prev_score = self._get_score(obs)
-        self.lives = self._get_lives(obs)
+        ram = self.env.unwrapped.ale.getRAM()
+        self.prev_position = self._get_position(ram)
+        self.prev_score = self._get_score(ram)
+        self.lives = self._get_lives(ram)
         self.total_reward = 0
         self.position_history.clear()
         self.episode += 1
@@ -325,10 +286,11 @@ class MontezumaRewardWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        ram = self.env.unwrapped.ale.getRAM()
 
-        score = self._get_score(obs)
-        position = self._get_position(obs)
-        lives = self._get_lives(obs)
+        score = self._get_score(ram)
+        position = self._get_position(ram)
+        lives = self._get_lives(ram)
 
         modified_reward = 0.0
 
@@ -338,7 +300,7 @@ class MontezumaRewardWrapper(gym.Wrapper):
         self.prev_score = score
 
         # Exploration: new room
-        room = self._get_room(obs)
+        room = self._get_room(ram)
         if room not in self.visited_rooms:
             self.visited_rooms.add(room)
             modified_reward += self.exploration_bonus
@@ -357,11 +319,12 @@ class MontezumaRewardWrapper(gym.Wrapper):
             modified_reward -= self.death_penalty
         self.lives = lives
 
-        obs_tensor = torch.tensor(obs, dtype=torch.float32, device=self.device)
-        r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
-        r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
+        if self.episode > 200:
+            obs_tensor = torch.tensor(ram, dtype=torch.float32, device=self.device)
+            r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
+            r_i = (r_i - np.mean(r_i)) / (np.std(r_i) + 1e-8)
 
-        modified_reward += self.alpha * r_i
+            modified_reward += self.alpha * r_i
 
 
         self.total_reward += reward
@@ -377,7 +340,8 @@ class MontezumaRewardWrapper(gym.Wrapper):
             'total_reward': self.total_reward,
             'original_reward': reward,
             'score best': self.score_best,
-            'episode' : self.episode
+            'episode' : self.episode,
+            'ram': ram
 
         })
 
@@ -589,23 +553,28 @@ class VectorEnvVisualizer:
     #     self.frames = []
     #     self.episode_count += 1
 
-def make_env(env_name, rnd_model, obs, wrapper):
+def make_env(env_name, rnd_model, obs, wrapper, rnd_delay):
     def _thunk():
-        env = gym.make(env_name, render_mode='rgb_array', obs_type=obs)
-        env = wrapper(env, rnd_model)
+        env = gym.make(env_name, render_mode='rgb_array', obs_type=obs, frameskip=1)
+        env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True, frame_skip=4,noop_max=60, screen_size=84)
+        env = FrameStackObservation(env, 4)
+        if rnd_delay:
+            env = wrapper(env, rnd_model, rnd_delay)
+        else:
+            env = wrapper(env, rnd_model)
         return env
     return _thunk
 
 
-def make_envs(env_name, num_envs, args, train=True, rnd_model=None):
+def make_envs(env_name, num_envs, args, train=True, rnd_model=None, rnd_delay = None):
     if args.mlp == 1:
         obs = 'ram'
     else:
         obs = "rgb"
     if 'Pacman' in args.env_name:
-        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper) for _ in range(num_envs)])
+        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper, rnd_delay) for _ in range(num_envs)])
     else:
-        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper) for _ in range(num_envs)])
+        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper, rnd_delay) for _ in range(num_envs)])
     envs.reset(seed=args.seed)
     return envs
 
@@ -620,3 +589,45 @@ def take_action(a, eps, env):
 
     return action.cpu().detach().numpy(), logp, entropy
         
+
+#========================================
+# Since I need to run the code through wsl for my gpu, I need to change some matplotlib settings. Hopefully this doesn't mess with anyone elses runtime 🙏
+#========================================
+
+def _is_wsl():
+    try:
+        if "WSL_DISTRO_NAME" in os.environ:
+            return True
+        rel = platform.release().lower()
+        if "microsoft" in rel or "wsl" in rel:
+            return True
+        # Fallback check
+        with open("/proc/version", "r") as f:
+            return "microsoft" in f.read().lower()
+    except Exception:
+        return False
+    
+def configure_matplotlib_for_wsl():
+    """Only tweak Matplotlib when running inside WSL."""
+    if not _is_wsl():
+        return  # don't touch teammates' environments
+
+    # If a GUI is available (WSLg or X server), prefer an interactive backend.
+    # Leave existing backend alone if it's already interactive.
+    current = matplotlib.get_backend().lower()
+    interactive_backends = {"tkagg", "qt5agg", "gtk3agg", "macosx", "wxagg"}
+    if current not in interactive_backends:
+        # Try TkAgg first, then Qt5Agg
+        for candidate in ("TkAgg", "Qt5Agg"):
+            try:
+                matplotlib.use(candidate, force=True)
+                break
+            except Exception:
+                continue
+
+if _is_wsl:
+    configure_matplotlib_for_wsl()
+    import matplotlib.pyplot as plt
+    plt.ion()
+else:
+    import matplotlib.pyplot as plt

@@ -9,11 +9,11 @@ from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=5e-3,
+parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=32,
+parser.add_argument('--num-workers', type=int, default=8,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
@@ -21,23 +21,23 @@ parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
 parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
-parser.add_argument('--grad-clip', type=float, default=5,
+parser.add_argument('--grad-clip', type=float, default=2.5,
                     help='Gradient clipping (recommended).')
 parser.add_argument('--entropy-coef', type=float, default=0.01,
                     help='Entropy coefficient to encourage exploration.')
-parser.add_argument('--mlp', type=int, default=1,
+parser.add_argument('--mlp', type=int, default=0,
                     help='toggle to feedforward ML architecture')
 
 # SPECIFIC FEUDALNET PARAMETERS
-parser.add_argument('--time-horizon', type=int, default=40,
+parser.add_argument('--time-horizon', type=int, default=10,
                     help='Manager horizon (c)')
 parser.add_argument('--hidden-dim-manager', type=int, default=256,
                     help='Hidden dim (d)')
-parser.add_argument('--hidden-dim-worker', type=int, default=128,
+parser.add_argument('--hidden-dim-worker', type=int, default=16,
                     help='Hidden dim for worker (k)')
 parser.add_argument('--gamma-w', type=float, default=0.95,
                     help="discount factor worker")
-parser.add_argument('--gamma-m', type=float, default=0.995,
+parser.add_argument('--gamma-m', type=float, default=0.99,
                     help="discount factor manager"),
 parser.add_argument('--alpha', type=float, default=.1,
                     help='Intrinsic reward coefficient in [0, 1]')
@@ -49,21 +49,23 @@ parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalv4',
+parser.add_argument('--run-name', type=str, default='feudalv6',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
                     default='feudal', help="which model to train")
-parser.add_argument('--decay-limit', type=float, default=5e-2,
+parser.add_argument('--decay-limit', type=float, default=1e-1,
                     help='how much eps decays')
 
 # QLEARN SPECIFIC PARAMETERS
-parser.add_argument('--gamma', type=float, default=0.99, help='discount factor for Q-learning')
-parser.add_argument('--target-update', type=int, default=10000, help='steps between target syncs')
+parser.add_argument('--gamma', type=float, default=0.95, help='discount factor for Q-learning')
+parser.add_argument('--target-update', type=int, default=7500, help='steps between target syncs')
 parser.add_argument('--eps-decay-freq', type=int, default=1280, help='steps between epsilon decays')
 
 parser.add_argument('--maximal', type=bool, default=False, help='use maximal reward')
+
+parser.add_argument('--load-file', type=str, default=None, help='file to load to continue training')
 
 args = parser.parse_args()
 
@@ -79,7 +81,17 @@ def experiment(args):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     
-    envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model)
+    rnd_delay = None
+    load = False
+    if args.load_file:
+        save_data = torch.load(args.load_file, weights_only=False)
+        args = save_data['args']
+        rnd_weights = save_data['rnd']
+        rnd_model.load_state_dict(rnd_weights)
+        rnd_delay = 0
+        load = True
+
+    envs = make_envs(args.env_name, args.num_workers, args, rnd_model=rnd_model, rnd_delay=rnd_delay)
     n_actions = envs.single_action_space.n
     if args.model == 'feudal':
         feudalnet = FeudalNetwork(
@@ -94,9 +106,8 @@ def experiment(args):
             mlp=args.mlp,
             args=args)
         optimizer = torch.optim.RMSprop([
-            {'params': feudalnet.manager.parameters(), 'lr': args.lr * .7},
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr},
             {'params': feudalnet.worker.parameters(), 'lr': args.lr},
-            {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
     elif args.model =='feudalTransformer':
         feudalnet = FeudalTransformer(
@@ -117,14 +128,25 @@ def experiment(args):
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
     else:
+        '''save_data = torch.load("models/MsPacman-v5_feudalv3_seed=0_step=7750000.pt", weights_only=False)
+        args = save_data['args']
+        model_weights = save_data['model']
+        print(f"model weights: {model_weights}")'''
         feudalnet = Qlearn(
             input_dim=envs.single_observation_space.shape,
             hidden_dim= args.hidden_dim_manager,
             n_actions=n_actions,
             device=device,
             mlp=args.mlp,
+            #init_weights=model_weights
         )
         optimizer = torch.optim.RMSprop(feudalnet.parameters(), lr = args.lr, alpha=.99, eps=1e-5)
+    
+    if load:
+        model_weights = save_data['model']
+        feudalnet.load_state_dict(model_weights)
+        args.max_steps -= save_data['step']
+        optimizer.load_state_dict(save_data['optim'])
     
     train = Train(args, feudalnet, optimizer, envs, logger, rnd_model)
     

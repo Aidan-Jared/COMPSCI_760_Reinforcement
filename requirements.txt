@@ -1,0 +1,12 @@
+torch
+numpy
+argparse
+gymnasium
+tetris_gymnasium
+matplotlib
+ale_py
+pandas
+seaborn
+rliable
+minari
+tensorboard

@@ -91,6 +91,7 @@ class FeudalNetwork(nn.Module):
             self.worker.eps *= self.decay
         except:
             self.worker.eps *= self.decay
+            
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp = False):
         super().__init__()
@@ -102,18 +103,18 @@ class Perception(nn.Module):
                 nn.Linear(64, d),
                 nn.LeakyReLU(.01),)
         else:
-            w1 = (input_dim[0] - 8) / 4 + 1
-            h1 = (input_dim[1] - 8) / 4 + 1
-            w2 = int((w1 - 4) / 2 + 1)
-            h2 = int((h1 - 4) / 2 + 1)
+            # w1 = (input_dim[0] - 8) / 4 + 1
+            # h1 = (input_dim[1] - 8) / 4 + 1
+            # w2 = int((w1 - 4) / 2 + 1)
+            # h2 = int((h1 - 4) / 2 + 1)
             self.percept = nn.Sequential(
-                nn.Conv2d(3,16, kernel_size=8, stride=4),
-                nn.ReLU(),
+                nn.Conv2d(4,16, kernel_size=8, stride=4),
+                nn.LeakyReLU(),
                 nn.Conv2d(16,32, kernel_size=4, stride=2),
-                nn.ReLU(),
-                nn.modules.Flatten(),
-                nn.Linear(32*w2 * h2, d),
-                nn.ReLU()
+                nn.LeakyReLU(),
+                nn.Flatten(),
+                nn.Linear(32 * 9 * 9, d),
+                nn.LeakyReLU()
             )
     
     def forward(self, x):
@@ -130,11 +131,18 @@ class Manager(nn.Module):
 
         self.Mspace = nn.Linear(self.d, self.d)
         self.Mrnn = DilatedLSTM(self.d, self.d, self.r)
+        # self.critic = nn.Sequential(
+        #     nn.Linear(self.d, self.d //2),
+        #     nn.ReLU(),
+        #     # nn.Linear(self.d //2, self.d //4),
+        #     # nn.ReLU(),
+        #     nn.Linear(self.d //2, 1)
+        # )
         self.critic = nn.Linear(self.d, 1)
 
 
     def forward(self, z, hidden, mask):
-        state = F.tanh(self.Mspace(z))
+        state = self.Mspace(z)
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
         value_est = self.critic(goal_hat)
@@ -210,10 +218,6 @@ class Worker(nn.Module):
         hidden = (u, cx)
 
         goals = torch.stack(goals).detach().sum(dim=0)
-        # weights = torch.exp(-0.02 * torch.arange(len(goals), dtype=torch.float, device=z.device))
-        # weights = weights / weights.sum()
-
-        # weighted_goals = torch.einsum('t,tbd->bd', weights.flip(0), goals)
         w = torch.tanh(self.phi(goals))
         value_est = self.critic(u)
 
@@ -240,7 +244,12 @@ class Worker(nn.Module):
             mask = mask * masks[t - i]
         r_i = r_i.detach()
         return r_i / self.c
-    
+
+def _to_numpy(x):
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().float().numpy()
+    return np.asarray(x, dtype=np.float32)
+  
 class Preprocessor:
     def __init__(self, shape, device='cpu', mlp=False):
         self.mlp = mlp
@@ -252,26 +261,39 @@ class Preprocessor:
         self.rms = RunningMeanStd(shape = (1,) + self.shape)
 
     def __call__(self, x):
+        if torch.onnx.is_in_onnx_export():
+            if not isinstance(x, torch.Tensor):
+                x = torch.as_tensor(x, dtype=torch.float64)
+            return x.to(self.device)
+        
         if not self.mlp:
-            x = np.asarray(x).reshape(x.shape[0], *self.shape)
-            self.rms.update(x)
-            
-            # Check if std is reasonable
-            std = np.sqrt(self.rms.var + 1e-5)
-            if std.mean() < 1e-3:  # Too small, use simple normalization
-                x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+            if isinstance(x, torch.Tensor):
+                x = x.detach().cpu().numpy()
             else:
-                x_normalized = (x - self.rms.mean) / std
+                x = np.asarray(x)
+                
+            # x = x.reshape(x.shape[0], *self.shape)
+            # self.rms.update(x)
+            
+            # # Check if std is reasonable
+            # std = np.sqrt(self.rms.var + 1e-5)
+            # if std.mean() < 1e-3:  # Too small, use simple normalization
+            #     x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+            # else:
+            #     x_normalized = (x - self.rms.mean) / std
             
             # CRITICAL: Clip to reasonable range
-            x_normalized = np.clip(x_normalized, -3.0, 3.0)
+            # x_normalized = np.clip(x_normalized, -3.0, 3.0)
+
+            if x.shape[2] == 4 and x.ndim == 4:
+                x = np.transpose(x, (0, 2, 1, 3))
             
-            return torch.FloatTensor(x_normalized).to(self.device)
+            return torch.FloatTensor(x).to(self.device)
         else:
             return torch.FloatTensor(x).to(self.device)
 
 class Qlearn(nn.Module):
-    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp):
+    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp, init_weights=None):
         super().__init__()
         self.d = int(hidden_dim)
         self.n_actions = int(n_actions)
@@ -287,23 +309,25 @@ class Qlearn(nn.Module):
 
         self.head = nn.Sequential(
             nn.Linear(self.d, h1),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(h1, h2),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(h2, h3),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(h3, self.n_actions),
         )
-
-        self.apply(self._weight_init)
+        if init_weights:
+            self.load_state_dict(init_weights)
+        else:
+            self.apply(self._weight_init)
         self.to(device)
 
     @staticmethod
     def _weight_init(m):
         if isinstance(m, (nn.Linear, nn.modules.conv.Conv2d)):
-            nn.init.orthogonal_(m.weight)
+            nn.init.orthogonal_(m.weight,  gain=.5)
             if m.bias is not None:
-                nn.init.constant_(m.bias, 0.)
+                nn.init.constant_(m.bias, 1.5)
 
     def forward(self, x):
         x = self.preprocessor(x)
@@ -315,13 +339,16 @@ class Qlearn(nn.Module):
     def act(self, obs, eps: float = 0.05):
         # Ensure batch dimension
         single = False
+
+        # convert numpy to tensor early
         if not torch.is_tensor(obs):
-            # Preprocessor can handle numpy; just keep flag for output shape
-            pass
+            obs = torch.as_tensor(obs, device=self.device, dtype=torch.float32)
+            single = (obs.ndim == 3) or (obs.ndim == 1)
         else:
             single = (obs.dim() == 3) or (obs.dim() == 1)
 
         q = self.forward(obs if not single else obs.unsqueeze(0))
+
         if eps > 0 and torch.rand(1, device=q.device).item() < eps:
             a = torch.randint(self.n_actions, (q.size(0),), device=q.device)
         else:
@@ -352,49 +379,75 @@ class RunningMeanStd:
         new_var = self.var + var_delta * batch_count / tot_count
         return new_mean, tot_count, new_var
     
-def feudal_loss(storage, next_v_m, next_v_w, args, step):
-    # Discount rewards, both of size B x T
-    ret_m = next_v_m
-    ret_w = next_v_w
+def calculate_ret(storage, args, ret_m, ret_w):
     storage.placeholder()  # Fill ret_m, ret_w with empty vals
     for i in reversed(range(len(storage.m_r))):
         ret_m = (storage.r[i]) + args.gamma_m * ret_m * storage.m[i]    
         ret_w = (storage.r[i]) + args.gamma_w * ret_w * storage.m[i]
         storage.ret_m[i] = ret_m
         storage.ret_w[i] = ret_w
+    return storage
+
+def compute_gae(rewards, values, next_value, masks, gamma, lambda_=.95, rewards_intrinsic = None):
+    advantages = []
+    gae = 0
+    values_list = list(values) + [next_value]
+    for t in reversed(range(len(rewards))):
+        delta = rewards[t] + gamma * values_list[t+1] * masks[t] - values_list[t]
+        gae = delta + gamma * lambda_ * masks[t] * gae
+        advantages.insert(0, gae)
+    return torch.stack(advantages)
+    
+def feudal_loss(storage, next_v_m, next_v_w, args, step):
+    # Discount rewards, both of size B x T
+    ret_m = next_v_m
+    ret_w = next_v_w
+
+    advantage_w = compute_gae(torch.stack(storage.r), torch.stack(storage.v_w), ret_w, torch.stack(storage.m),gamma=args.gamma_w)
+    advantage_m = compute_gae(torch.stack(storage.r), torch.stack(storage.v_m), ret_m, torch.stack(storage.m),gamma=args.gamma_m)
+
+    # storage = calculate_ret(storage, args, ret_m, ret_w)
+    # storage.placeholder()  # Fill ret_m, ret_w with empty vals
+    # for i in reversed(range(len(storage.m_r))):
+    #     ret_m = (storage.r[i]) + args.gamma_m * ret_m * storage.m[i]    
+    #     ret_w = (storage.r[i]) + args.gamma_w * ret_w * storage.m[i]
+    #     storage.ret_m[i] = ret_m
+    #     storage.ret_w[i] = ret_w
 
     # Optionally, normalize the returns
     # storage.normalize(['ret_w', 'ret_m'])
 
-    rewards_intrinsic, value_m, value_w, ret_w, ret_m, logps, entropy, \
+    rewards_intrinsic, logps, entropy, \
         state_goal_cosines, goal_entropy, goal_q = storage.stack(
-            ['r_i', 'v_m', 'v_w', 'ret_w', 'ret_m',
-             'logp', 'entropy', 's_goal_cos', 'goal_entropy', 'goal_q'])
+            ['r_i',  'logp', 'entropy', 's_goal_cos', 'goal_entropy', 'goal_q'])
+    # ret_m, ret_w, value_m, value_w, 
+    # 'ret_m', 'ret_w', 'v_m' , 'v_w',
+    # rewards_intrinsic.multinomial(64)
+    # idx = rewards_intrinsic.multi
 
     # Calculate advantages, size B x T
     r_i = (rewards_intrinsic - rewards_intrinsic.mean()) / (rewards_intrinsic.std() + 1e-8)
     
     # want to get closer to 0
-    advantage_w = (ret_w + args.alpha * r_i) - value_w
-    advantage_w = (advantage_w - advantage_w.mean()) / (advantage_w.std() + 1e-8)
+    advantage_w = (advantage_w + args.alpha * r_i) #- value_w
+    # advantage_w = (advantage_w - advantage_w.mean()) / (advantage_w.std() + 1e-8)
 
-    advantage_m = ret_m - value_m 
-    advantage_m = (advantage_m - advantage_m.mean()) / (advantage_m.std() + 1e-8)
+    # advantage_m = ret_m - value_m 
 
-    goal_q = .9 * goal_q.mean()
+    goal_q = goal_q.mean()
     loss_worker = (logps * advantage_w.detach()).mean()
     # state_goal_cosines = (state_goal_cosines + 1) / 2
-    loss_manager =  (state_goal_cosines * advantage_m.detach()).mean()
+    loss_manager = (state_goal_cosines * advantage_m.detach()).mean()
 
     # Update the critics into the right direction
-    value_w_loss = 0.5 * advantage_w.pow(2).mean()
-    value_m_loss = 0.5 * advantage_m.pow(2).mean()
+    value_w_loss = 0.05 * advantage_w.pow(2).mean()
+    value_m_loss = 0.05 * advantage_m.pow(2).mean()
 
     entropy = entropy.mean()
     goal_entropy = goal_entropy.mean()
     # entropy_coef = args.entropy_coef * max(1/250, 2e6 / max(2e6, (step / 4)))
 
-    loss = - loss_worker - loss_manager + value_w_loss + value_m_loss \
+    loss = - loss_worker -  loss_manager + value_w_loss + value_m_loss \
         - (args.entropy_coef * entropy)
 
     return loss, {'loss/total_fun_loss': loss.item(),
