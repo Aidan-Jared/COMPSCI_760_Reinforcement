@@ -159,7 +159,7 @@ class Manager(nn.Module):
 
 
     def forward(self, z, hidden, mask):
-        state = F.leaky_relu(self.Mspace(z))
+        state = F.relu(self.Mspace(z))
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
         value_est = self.critic(goal_hat)

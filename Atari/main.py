@@ -47,13 +47,13 @@ parser.add_argument('--gamma-m', type=float, default=0.99,
                     help="discount factor manager"),
 parser.add_argument('--alpha', type=float, default=.1,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=.9,
+parser.add_argument('--eps', type=float, default=.5,
                     help='Random Gausian goal for exploration')
 parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM')
 parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
-parser.add_argument('--gea', type=bool, default=True,
+parser.add_argument('--gea', type=bool, default=False,
                     help='use gea in advantage calculation')
 
 # EXPERIMENT RELATED PARAMS
