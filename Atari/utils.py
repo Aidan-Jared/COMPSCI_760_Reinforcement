@@ -2,13 +2,12 @@ import gymnasium as gym
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 import ale_py
 gym.register_envs(ale_py)
-from collections import deque, Counter
+from collections import deque
 
 import torch
 import numpy as np
 import scipy.stats as stats
 
-import logging
 import os, platform, matplotlib
 import time
 from datetime import datetime
@@ -109,7 +108,7 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .01, death_penalty=50, rnd_delay=20):
+    def __init__(self, env, rnd_model, alpha = .01, death_penalty=5., rnd_delay=20):
         super().__init__(env)
 
         self.death_penalty = death_penalty
@@ -163,15 +162,19 @@ class PacmanRewardWrapper(gym.Wrapper):
 
 
         modified_reward = reward
-        if reward == 10:
-            # reward pellet collection
-             modified_reward = 10
-        if reward == 50:
-            modified_reward = 20
-        if reward == 100:
-            modified_reward = 25
-        if reward >= 200:
-            modified_reward = 30
+        
+        if reward <= 50:
+            modified_reward /= 10
+        elif reward <= 100:
+            modified_reward /= 10.
+        elif reward <= 200:
+            modified_reward /= 15
+        elif reward <= 400:
+            modified_reward /= 20
+        elif reward <= 800:
+            modified_reward /= 30
+        else:
+            modified_reward /= 40
 
         if info['lives'] < self.lives :
             # penalty for death
@@ -553,11 +556,15 @@ class VectorEnvVisualizer:
     #     self.frames = []
     #     self.episode_count += 1
 
-def make_env(env_name, rnd_model, obs, wrapper, rnd_delay):
+def make_env(env_name, rnd_model, obs, wrapper, rnd_delay, args):
     def _thunk():
-        env = gym.make(env_name, render_mode='rgb_array', obs_type=obs, frameskip=1)
-        env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True, frame_skip=4,noop_max=60, screen_size=84)
-        env = FrameStackObservation(env, 4)
+        env = gym.make(env_name, render_mode='rgb_array', obs_type=obs, frameskip=1)        
+        greyscale = args.greyscale
+        if args.frame_stacking:
+            greyscale = True
+        env = AtariPreprocessing(env, grayscale_obs=greyscale, scale_obs=greyscale, frame_skip=4, noop_max=60, screen_size=84)
+        if args.frame_stacking:
+            env = FrameStackObservation(env, 4)
         if rnd_delay:
             env = wrapper(env, rnd_model, rnd_delay)
         else:
@@ -572,9 +579,9 @@ def make_envs(env_name, num_envs, args, train=True, rnd_model=None, rnd_delay = 
     else:
         obs = "rgb"
     if 'Pacman' in args.env_name:
-        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper, rnd_delay) for _ in range(num_envs)])
+        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper, rnd_delay, args) for _ in range(num_envs)])
     else:
-        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper, rnd_delay) for _ in range(num_envs)])
+        envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper, rnd_delay, args) for _ in range(num_envs)])
     envs.reset(seed=args.seed)
     return envs
 
