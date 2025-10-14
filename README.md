@@ -5,7 +5,6 @@ This repository contains projects related to reinforcement learning for the COMP
 ## Structure
 
 -   `Atari/`: Contains the implementation of a Feudal Network agent for playing Atari games like Ms. Pac-Man.
-
 ---
 
 ## Atari Project
@@ -73,8 +72,6 @@ You can train the agent using the `main.py` script in the `Atari` directory.
 
 Training progress and logs will be saved in the `Atari/logs/` directory, and models will be saved in `Atari/models/`.
 
-
-
 Main code is in the Atari folder. Balatro is legacy code that still works and can be used in the future.
 
 # Using Code
@@ -110,5 +107,5 @@ To train a model run `main.py`
     `eps-decay-freq` steps between epsilon decays
     `load-file` file to load to continue  training
 
-
-to test a model run `test.py`
+## Contributions:
+Aidan Jared was the group leader and worked on the API for _Balatro_, implementing the feudal network, transformer model, and training loop for both feudal and transformer models, as well as reward wrappers for _Ms. Pac-Man_ and _Montezuma's Revenge_, testing loop, all utility code, and player data collection script.Dominicus worked on evaluating model performance using _rliable_, worked on the reward wrapper for _Montezuma's Revenge_, and Documentation. Thomas designed the Q-model and its associated training and testing loops.
