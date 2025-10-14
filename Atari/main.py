@@ -9,24 +9,30 @@ from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=1e-3,
+parser.add_argument('--lr', type=float, default=5e-4,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
 parser.add_argument('--num-workers', type=int, default=8,
                     help='number of parallel environments to run')
-parser.add_argument('--num-steps', type=int, default=400,
+parser.add_argument('--num-steps', type=int, default=256,
                     help='number of steps the agent takes before updating')
 parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
 parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
-parser.add_argument('--grad-clip', type=float, default=2.5,
+parser.add_argument('--grad-clip', type=float, default=5,
                     help='Gradient clipping (recommended).')
-parser.add_argument('--entropy-coef', type=float, default=0.01,
+parser.add_argument('--frame-stacking', type=bool, default=True,
+                    help='should the frames be stacked to give temporal information')
+parser.add_argument('--greyscale', type=bool, default=True,
+                    help='train on greyscale frames, set to True if frame stacking is True')
+parser.add_argument('--entropy-coef', type=float, default=0.05,
                     help='Entropy coefficient to encourage exploration.')
 parser.add_argument('--mlp', type=int, default=0,
                     help='toggle to feedforward ML architecture')
+parser.add_argument('--padding', type=bool, default=False,
+                    help='apply padding to perception')
 
 # SPECIFIC FEUDALNET PARAMETERS
 parser.add_argument('--time-horizon', type=int, default=10,
@@ -44,9 +50,11 @@ parser.add_argument('--alpha', type=float, default=.1,
 parser.add_argument('--eps', type=float, default=.9,
                     help='Random Gausian goal for exploration')
 parser.add_argument('--dilation', type=int, default=10,
-                    help='Dilation parameter for manager LSTM.')
+                    help='Dilation parameter for manager LSTM')
 parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
+parser.add_argument('--gea', type=bool, default=True,
+                    help='use gea in advantage calculation')
 
 # EXPERIMENT RELATED PARAMS
 parser.add_argument('--run-name', type=str, default='feudalv6',
@@ -56,12 +64,15 @@ parser.add_argument('--seed', type=int, default=0,
 parser.add_argument('--model', type=str, choices=['feudal', 'feudalTransformer', 'qlearn'],
                     default='feudal', help="which model to train")
 parser.add_argument('--decay-limit', type=float, default=1e-1,
-                    help='how much eps decays')
+                    help='how much eps decays to')
 
 # QLEARN SPECIFIC PARAMETERS
-parser.add_argument('--gamma', type=float, default=0.95, help='discount factor for Q-learning')
-parser.add_argument('--target-update', type=int, default=7500, help='steps between target syncs')
-parser.add_argument('--eps-decay-freq', type=int, default=1280, help='steps between epsilon decays')
+parser.add_argument('--gamma', type=float, default=0.95, 
+                    help='discount factor for Q-learning')
+parser.add_argument('--target-update', type=int, default=7500, 
+                    help='steps between target syncs')
+parser.add_argument('--eps-decay-freq', type=int, default=1280, 
+                    help='steps between epsilon decays')
 
 parser.add_argument('--maximal', type=bool, default=False, help='use maximal reward')
 
@@ -108,6 +119,7 @@ def experiment(args):
         optimizer = torch.optim.RMSprop([
             {'params': feudalnet.manager.parameters(), 'lr': args.lr},
             {'params': feudalnet.worker.parameters(), 'lr': args.lr},
+            {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
     elif args.model =='feudalTransformer':
         feudalnet = FeudalTransformer(

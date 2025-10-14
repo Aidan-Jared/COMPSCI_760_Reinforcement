@@ -54,7 +54,7 @@ class FeudalNetwork(nn.Module):
         goals.append(goal)
         states.append(state.detach())
         
-        action_dist, hidden_w, value_w = self.worker(z,  goals[:self.c + 1], self.hidden_w, mask)
+        action_dist, hidden_w, value_w = self.worker(z,  goals[self.c + 1:], self.hidden_w, mask)
         if save:
             self.hidden_m = (hidden_m[0].detach(),hidden_m[1].detach())
             self.hidden_w = (hidden_w[0].detach(),hidden_w[1].detach())
@@ -93,7 +93,7 @@ class FeudalNetwork(nn.Module):
             self.worker.eps *= self.decay
             
 class Perception(nn.Module):
-    def __init__(self, input_dim, d, mlp = False):
+    def __init__(self, input_dim, d, mlp = False, padding = False):
         super().__init__()
         if mlp:
             self.percept = nn.Sequential(
@@ -107,15 +107,32 @@ class Perception(nn.Module):
             # h1 = (input_dim[1] - 8) / 4 + 1
             # w2 = int((w1 - 4) / 2 + 1)
             # h2 = int((h1 - 4) / 2 + 1)
-            self.percept = nn.Sequential(
-                nn.Conv2d(4,16, kernel_size=8, stride=4),
-                nn.LeakyReLU(),
-                nn.Conv2d(16,32, kernel_size=4, stride=2),
-                nn.LeakyReLU(),
-                nn.Flatten(),
-                nn.Linear(32 * 9 * 9, d),
-                nn.LeakyReLU()
-            )
+            if padding:
+                pad = 2
+            else:
+                pad = 0
+            if len(input_dim) == 3:
+                self.percept = nn.Sequential(
+                    nn.Conv2d(min(input_dim),16, kernel_size=8, stride=4,  padding=pad),
+                    nn.LeakyReLU(),
+                    nn.Conv2d(16,32, kernel_size=4, stride=2, padding=pad // 2),
+                    nn.LeakyReLU(),
+                    nn.Flatten(),
+                    nn.Linear(32 * (9 + pad) * (9 + pad), d),
+                    nn.LayerNorm(d),
+                    nn.LeakyReLU()
+                )
+            else:
+                self.percept = nn.Sequential(
+                    nn.Conv2d(1,16, kernel_size=8, stride=4, padding=pad),
+                    nn.LeakyReLU(),
+                    nn.Conv2d(16,32, kernel_size=4, stride=2, padding=pad // 2),
+                    nn.LeakyReLU(),
+                    nn.Flatten(),
+                    nn.Linear(32 * (9 + pad) * (9 + pad), d),
+                    nn.LayerNorm(d),
+                    nn.LeakyReLU()
+                )
     
     def forward(self, x):
         return self.percept(x)
@@ -131,18 +148,18 @@ class Manager(nn.Module):
 
         self.Mspace = nn.Linear(self.d, self.d)
         self.Mrnn = DilatedLSTM(self.d, self.d, self.r)
-        # self.critic = nn.Sequential(
-        #     nn.Linear(self.d, self.d //2),
-        #     nn.ReLU(),
-        #     # nn.Linear(self.d //2, self.d //4),
-        #     # nn.ReLU(),
-        #     nn.Linear(self.d //2, 1)
-        # )
-        self.critic = nn.Linear(self.d, 1)
+        self.critic = nn.Sequential(
+            nn.Linear(self.d, self.d //2),
+            nn.ReLU(),
+            nn.Linear(self.d //2, self.d //4),
+            nn.ReLU(),
+            nn.Linear(self.d //4, 1)
+        )
+        # self.critic = nn.Linear(self.d, 1)
 
 
     def forward(self, z, hidden, mask):
-        state = self.Mspace(z)
+        state = F.leaky_relu(self.Mspace(z))
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
         value_est = self.critic(goal_hat)
@@ -271,22 +288,27 @@ class Preprocessor:
                 x = x.detach().cpu().numpy()
             else:
                 x = np.asarray(x)
-                
-            # x = x.reshape(x.shape[0], *self.shape)
-            # self.rms.update(x)
-            
-            # # Check if std is reasonable
-            # std = np.sqrt(self.rms.var + 1e-5)
-            # if std.mean() < 1e-3:  # Too small, use simple normalization
-            #     x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
-            # else:
-            #     x_normalized = (x - self.rms.mean) / std
-            
-            # CRITICAL: Clip to reasonable range
-            # x_normalized = np.clip(x_normalized, -3.0, 3.0)
 
             if x.shape[2] == 4 and x.ndim == 4:
                 x = np.transpose(x, (0, 2, 1, 3))
+            elif x.ndim == 3 and x.shape[0] > 1:
+                return torch.FloatTensor(x).to(self.device).unsqueeze(1)
+            elif x.ndim == 4 and x.shape[1] ==4:
+                x = x
+            else:
+                x = x.reshape(x.shape[0], *self.shape)
+                self.rms.update(x)
+                
+                # Check if std is reasonable
+                std = np.sqrt(self.rms.var + 1e-5)
+                if std.mean() < 1e-3:  # Too small, use simple normalization
+                    x_normalized = (x - 128.0) / 64.0  # RAM values [0,255] -> ~[-2,2]
+                else:
+                    x_normalized = (x - self.rms.mean) / std
+                
+                # CRITICAL: Clip to reasonable range
+                x_normalized = np.clip(x_normalized, -3.0, 3.0)
+                x = np.transpose(x, (0, 3, 1, 2))
             
             return torch.FloatTensor(x).to(self.device)
         else:
@@ -403,52 +425,40 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
     ret_m = next_v_m
     ret_w = next_v_w
 
-    advantage_w = compute_gae(torch.stack(storage.r), torch.stack(storage.v_w), ret_w, torch.stack(storage.m),gamma=args.gamma_w)
-    advantage_m = compute_gae(torch.stack(storage.r), torch.stack(storage.v_m), ret_m, torch.stack(storage.m),gamma=args.gamma_m)
+    if args.gea:
+        r , value_w, value_m, m, rewards_intrinsic = storage.stack(['r', 'v_w', 'v_m', 'm', 'r_i'])
+        advantage_w = compute_gae(r + (args.alpha * rewards_intrinsic), value_w, ret_w, m,gamma=args.gamma_w)
+        advantage_m = compute_gae(r, value_m, ret_m, m,gamma=args.gamma_m, lambda_=.85)
+    else:
 
-    # storage = calculate_ret(storage, args, ret_m, ret_w)
-    # storage.placeholder()  # Fill ret_m, ret_w with empty vals
-    # for i in reversed(range(len(storage.m_r))):
-    #     ret_m = (storage.r[i]) + args.gamma_m * ret_m * storage.m[i]    
-    #     ret_w = (storage.r[i]) + args.gamma_w * ret_w * storage.m[i]
-    #     storage.ret_m[i] = ret_m
-    #     storage.ret_w[i] = ret_w
+        storage = calculate_ret(storage, args, ret_m, ret_w)
+        ret_m, ret_w, value_m, value_w, rewards_intrinsic= storage.stack(['ret_m', 'ret_w', 'v_m', 'v_w', 'r_i'])
+        r_i = (rewards_intrinsic - rewards_intrinsic.mean()) / (rewards_intrinsic.std() + 1e-8)
+        advantage_w = (ret_w + args.alpha * r_i) - value_w
+        advantage_m = ret_m - value_m 
 
     # Optionally, normalize the returns
     # storage.normalize(['ret_w', 'ret_m'])
 
     rewards_intrinsic, logps, entropy, \
         state_goal_cosines, goal_entropy, goal_q = storage.stack(
-            ['r_i',  'logp', 'entropy', 's_goal_cos', 'goal_entropy', 'goal_q'])
-    # ret_m, ret_w, value_m, value_w, 
-    # 'ret_m', 'ret_w', 'v_m' , 'v_w',
-    # rewards_intrinsic.multinomial(64)
-    # idx = rewards_intrinsic.multi
+            ['r_i', 'logp', 'entropy', 's_goal_cos', 'goal_entropy', 'goal_q'])
 
-    # Calculate advantages, size B x T
-    r_i = (rewards_intrinsic - rewards_intrinsic.mean()) / (rewards_intrinsic.std() + 1e-8)
-    
-    # want to get closer to 0
-    advantage_w = (advantage_w + args.alpha * r_i) #- value_w
-    # advantage_w = (advantage_w - advantage_w.mean()) / (advantage_w.std() + 1e-8)
-
-    # advantage_m = ret_m - value_m 
 
     goal_q = goal_q.mean()
-    loss_worker = (logps * advantage_w.detach()).mean()
-    # state_goal_cosines = (state_goal_cosines + 1) / 2
-    loss_manager = (state_goal_cosines * advantage_m.detach()).mean()
+    loss_worker = -(logps * advantage_w.detach()).mean()
+    loss_manager = -(state_goal_cosines * (advantage_m.detach())).mean()
 
     # Update the critics into the right direction
-    value_w_loss = 0.05 * advantage_w.pow(2).mean()
-    value_m_loss = 0.05 * advantage_m.pow(2).mean()
+    value_w_loss = 0.5 * advantage_w.pow(2).mean()
+    value_m_loss = 0.5 * advantage_m.pow(2).mean()
 
     entropy = entropy.mean()
     goal_entropy = goal_entropy.mean()
-    # entropy_coef = args.entropy_coef * max(1/250, 2e6 / max(2e6, (step / 4)))
 
-    loss = - loss_worker -  loss_manager + value_w_loss + value_m_loss \
+    loss = loss_worker + loss_manager + value_w_loss + value_m_loss \
         - (args.entropy_coef * entropy)
+
 
     return loss, {'loss/total_fun_loss': loss.item(),
                   'loss/worker': loss_worker.item(),

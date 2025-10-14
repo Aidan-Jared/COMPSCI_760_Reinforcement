@@ -54,7 +54,7 @@ class Train:
                 masks.append(mask)
 
                 storage.add({
-                    'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device)/10,
+                    'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
                     'm_r': torch.FloatTensor(info['original_reward']).unsqueeze(-1).to(self.device),
                     'r_t': torch.FloatTensor(info['total_reward']).unsqueeze(-1).to(self.device),
                     'r_i': self.model.intrinsic_reward(states, goals, masks),
@@ -82,7 +82,40 @@ class Train:
             loss, loss_dict = feudal_loss(storage, next_v_m, next_v_w, self.args, step)
             loss.backward()
             # update model with gradient clipping
+
+            if step % 10000 == 0:
+                print(f"\n=== Gradient Flow Check ===")
+                
+                # Check if gradients exist and their magnitudes
+                for name, param in self.model.named_parameters():
+                    if param.grad is not None:
+                        grad_norm = param.grad.norm().item()
+                        print(f"{name:50s} | grad norm: {grad_norm:.6f}")
+                        if grad_norm < 1e-7:
+                            print(f"  ⚠️  VANISHING gradient in {name}")
+                        elif grad_norm > 100:
+                            print(f"  ⚠️  EXPLODING gradient in {name}")
+                    else:
+                        print(f"{name:50s} | NO GRADIENT")
+
+
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.grad_clip)
+
+            if step % 10000 == 0:
+                print(f"\n=== Gradient Flow Check ===")
+                
+                # Check if gradients exist and their magnitudes
+                for name, param in self.model.named_parameters():
+                    if param.grad is not None:
+                        grad_norm = param.grad.norm().item()
+                        print(f"{name:50s} | grad norm: {grad_norm:.6f}")
+                        if grad_norm < 1e-7:
+                            print(f"  ⚠️  VANISHING gradient in {name}")
+                        elif grad_norm > 100:
+                            print(f"  ⚠️  EXPLODING gradient in {name}")
+                    else:
+                        print(f"{name:50s} | NO GRADIENT")
+
             self.optimizer.step()
 
             # self.lr_scheduler.step()
