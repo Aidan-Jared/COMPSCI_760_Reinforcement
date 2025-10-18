@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from dilated_lstm import DilatedLSTM
-from utils import VectorEnvVisualizer, Storage
+from CBAM import CBAM
 
 class FeudalNetwork(nn.Module):
     def __init__(self, num_workers, input_dim, hidden_dim_manager, hidden_dim_worker, n_actions, time_horizon = 10, dilation = 10, device = 'cpu', mlp = False, args = None):
@@ -37,8 +37,12 @@ class FeudalNetwork(nn.Module):
         return(torch.randn(n_workers, h_dim, requires_grad=grad).to(self.device), torch.randn(n_workers, h_dim, requires_grad=grad).to(self.device))
     
     def _weight_init(self, layer):
-        if type(layer) == nn.modules.conv.Conv2d or type(layer) == nn.Linear:
-            nn.init.orthogonal_(layer.weight.data)
+        if type(layer) == nn.Linear:
+            nn.init.orthogonal_(layer.weight.data, gain=.1)
+            if layer.bias is not None:
+                nn.init.constant_(layer.bias.data,0)
+        if type(layer) == nn.modules.conv.Conv2d:
+            nn.init.kaiming_normal_(layer.weight, nonlinearity='relu')
             if layer.bias is not None:
                 nn.init.constant_(layer.bias.data,0)
 
@@ -91,7 +95,7 @@ class FeudalNetwork(nn.Module):
             self.worker.eps *= self.decay
         except:
             self.worker.eps *= self.decay
-            
+
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp = False, padding = False):
         super().__init__()
@@ -103,40 +107,56 @@ class Perception(nn.Module):
                 nn.Linear(64, d),
                 nn.LeakyReLU(.01),)
         else:
-            # w1 = (input_dim[0] - 8) / 4 + 1
-            # h1 = (input_dim[1] - 8) / 4 + 1
-            # w2 = int((w1 - 4) / 2 + 1)
-            # h2 = int((h1 - 4) / 2 + 1)
             if padding:
                 pad = 2
             else:
                 pad = 0
             if len(input_dim) == 3:
+                w1 = (input_dim[1] - 8) / 4 + 1
+                h1 = (input_dim[2] - 8) / 4 + 1
+                w2 = int((w1 - 4) / 2 + 1)
+                h2 = int((h1 - 4) / 2 + 1)
+                # self.percept = nn.Sequential(
+                #     nn.Conv2d(min(input_dim),16, kernel_size=8, stride=4,  padding=pad),
+                #     nn.ELU(),
+                #     nn.Conv2d(16,32, kernel_size=4, stride=2, padding=pad // 2),
+                #     nn.ELU(),
+                #     nn.Flatten(),
+                #     nn.Linear(32 * w2 * h2, d),
+                #     nn.BatchNorm1d(d, affine=False, track_running_stats=True),
+                #     nn.ELU()
+                # )
                 self.percept = nn.Sequential(
-                    nn.Conv2d(min(input_dim),16, kernel_size=8, stride=4,  padding=pad),
-                    nn.LeakyReLU(),
-                    nn.Conv2d(16,32, kernel_size=4, stride=2, padding=pad // 2),
-                    nn.LeakyReLU(),
+                    CBAM(4, 4, 7, 1,0),
+                    nn.Conv2d(4,16, kernel_size=8, stride=4),
+                    nn.ELU(),
                     nn.Flatten(),
-                    nn.Linear(32 * (9 + pad) * (9 + pad), d),
+                    nn.Linear(16 * 20 * 20,d),
                     nn.LayerNorm(d),
-                    nn.LeakyReLU()
                 )
             else:
                 self.percept = nn.Sequential(
                     nn.Conv2d(1,16, kernel_size=8, stride=4, padding=pad),
-                    nn.LeakyReLU(),
+                    nn.ELU(.1),
                     nn.Conv2d(16,32, kernel_size=4, stride=2, padding=pad // 2),
-                    nn.LeakyReLU(),
+                    nn.ELU(.1),
                     nn.Flatten(),
-                    nn.Linear(32 * (9 + pad) * (9 + pad), d),
+                    nn.Linear(32 * (9 + pad) * (9 + pad), d * 2),
+                    nn.LayerNorm(d*2),
+                    # nn.BatchNorm1d(d, affine=False, track_running_stats=True),
+                    nn.ELU(),
+                    nn.Linear(d * 2, d),
                     nn.LayerNorm(d),
-                    nn.LeakyReLU()
+                    nn.ELU()
                 )
     
     def forward(self, x):
-        return self.percept(x)
+        # x = (x - x.mean((1,2,3), keepdim=True)) / (x.std((1,2,3), keepdim=True) + 1e-8)
+        z = self.percept(x)
+        # scale = torch.abs(self.scale)
+        return z #scale * torch.tanh(z / scale)
         # return torch.utils.checkpoint.checkpoint(self.percept, x, use_reentrant=False)
+
 
 class Manager(nn.Module):
     def __init__(self, c, d, r, args, device):
@@ -145,6 +165,7 @@ class Manager(nn.Module):
         self.d = d # hidden dim size
         self.r = r # dilation elvel
         self.device = device
+        self.eps = args.eps
 
         self.Mspace = nn.Linear(self.d, self.d)
         self.Mrnn = DilatedLSTM(self.d, self.d, self.r)
@@ -159,14 +180,18 @@ class Manager(nn.Module):
 
 
     def forward(self, z, hidden, mask):
-        state = F.relu(self.Mspace(z))
+        state = F.elu(self.Mspace(z))
         hidden = (mask * hidden[0], mask * hidden[1])
         goal_hat, hidden = self.Mrnn(state, hidden)
         value_est = self.critic(goal_hat)
 
         # scale_factor = torch.tanh(self.scale_factor(goal_hat))
+        
 
         goal = F.normalize(goal_hat) #* scale_factor
+        # if self.training and np.random.rand() < self.eps / 100:
+        #     noise = torch.rand_like(goal, requires_grad=False) *.01
+        #     goal = goal + noise
         state = state.detach()
 
         return goal, hidden, state, value_est
@@ -210,6 +235,7 @@ class Manager(nn.Module):
         quality = mask * quality
         return quality.mean()
     
+    
 class Worker(nn.Module):
     def __init__(self, b, c, d, k, num_actions, device, args):
         super().__init__()
@@ -235,15 +261,15 @@ class Worker(nn.Module):
         hidden = (u, cx)
 
         goals = torch.stack(goals).detach().sum(dim=0)
-        w = torch.tanh(self.phi(goals))
+        w = self.phi(goals)
         value_est = self.critic(u)
 
         u = u.reshape(u.shape[0], self.k, self.num_actions)
 
-        a = torch.einsum("bk, bka -> ba", w, u) / np.sqrt(self.k)
+        a = torch.einsum("bk, bka -> ba", w, u)
 
         if self.training and np.random.rand() < self.eps:
-            noise = torch.rand_like(a) * .1
+            noise = torch.rand_like(a, requires_grad=False)
             a = a + noise
         a = F.softmax(a, dim=-1)
 
@@ -261,6 +287,59 @@ class Worker(nn.Module):
             mask = mask * masks[t - i]
         r_i = r_i.detach()
         return r_i / self.c
+
+class WorkerAttn(nn.Module):
+    def __init__(self, b, c, d, k, num_actions, device, args):
+        super().__init__()
+        self.b = b
+        self.c = c
+        self.k = k
+        self.num_actions = num_actions
+        self.device = device
+        self.eps = args.eps
+
+        self.Wrnn = nn.LSTMCell(d, k * self.num_actions)
+        self.phi = nn.Linear(d, k, bias=False)
+
+        self.critic = nn.Sequential(
+            nn.Linear(k * num_actions, 50),
+            nn.ReLU(),
+            nn.Linear(50,1)
+        )
+    
+    def forward(self, z, goals, hidden, mask):
+        hidden = (mask * hidden[0], mask * hidden[1])
+        u, cx = self.Wrnn(z, hidden)
+        hidden = (u, cx)
+
+        goals = torch.stack(goals).detach()
+        w = self.phi(goals)
+        value_est = self.critic(u)
+
+        u = u.reshape(u.shape[0], self.k, self.num_actions)
+
+        a = torch.einsum("bk, bka -> ba", w, u)
+
+        if self.training and np.random.rand() < self.eps:
+            noise = torch.rand_like(a, requires_grad=False)
+            a = a + noise
+        a = F.softmax(a, dim=-1)
+
+
+        return a, hidden, value_est
+    
+    def intrinsic_reward(self, states, goals, masks):
+        t = self.c
+        r_i = torch.zeros(self.b, 1).to(self.device)
+        mask = torch.ones(self.b, 1).to(self.device)
+        for i in range(1, self.c + 1):
+            r_i_t = F.cosine_similarity(states[t] - states[t - i], goals[t - i]).unsqueeze(-1)
+            r_i += (mask * r_i_t)
+
+            mask = mask * masks[t - i]
+        r_i = r_i.detach()
+        return r_i / self.c
+
 
 def _to_numpy(x):
     if isinstance(x, torch.Tensor):
@@ -294,7 +373,7 @@ class Preprocessor:
             elif x.ndim == 3 and x.shape[0] > 1:
                 return torch.FloatTensor(x).to(self.device).unsqueeze(1)
             elif x.ndim == 4 and x.shape[1] ==4:
-                x = x
+                x = x#[:, :, :-14, :]
             else:
                 x = x.reshape(x.shape[0], *self.shape)
                 self.rms.update(x)
@@ -446,12 +525,12 @@ def feudal_loss(storage, next_v_m, next_v_w, args, step):
 
 
     goal_q = goal_q.mean()
-    loss_worker = -(logps * advantage_w.detach()).mean()
-    loss_manager = -(state_goal_cosines * (advantage_m.detach())).mean()
+    loss_worker = - (logps * advantage_w.detach()).mean()
+    loss_manager = - (state_goal_cosines * (advantage_m.detach())).mean()
 
     # Update the critics into the right direction
-    value_w_loss = 0.5 * advantage_w.pow(2).mean()
-    value_m_loss = 0.5 * advantage_m.pow(2).mean()
+    value_w_loss = 0.1 * advantage_w.pow(2).mean()
+    value_m_loss = 0.1 * advantage_m.pow(2).mean()
 
     entropy = entropy.mean()
     goal_entropy = goal_entropy.mean()

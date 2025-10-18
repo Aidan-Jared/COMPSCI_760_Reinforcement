@@ -7,7 +7,11 @@ class DilatedLSTM(nn.Module):
         self.radius = radius
         self.hidden_size = hidden_size
         self.rnn = nn.LSTMCell(input_size, hidden_size)
-        self.index = torch.arange(0, radius * hidden_size, radius)
+        # self.index = torch.arange(0, radius * hidden_size, radius)
+        self.register_buffer('index', torch.arange(0, radius * hidden_size, radius))
+        self.register_buffer('all_indices', torch.arange(radius * hidden_size))
+
+
         self.dilation = 0
 
     def forward(self, state, hidden):

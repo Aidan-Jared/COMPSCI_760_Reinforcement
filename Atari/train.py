@@ -53,11 +53,12 @@ class Train:
                 masks.pop(0)                    
                 masks.append(mask)
 
+
                 storage.add({
                     'r': torch.FloatTensor(reward).unsqueeze(-1).to(self.device),
                     'm_r': torch.FloatTensor(info['original_reward']).unsqueeze(-1).to(self.device),
                     'r_t': torch.FloatTensor(info['total_reward']).unsqueeze(-1).to(self.device),
-                    'r_i': self.model.intrinsic_reward(states, goals, masks),
+                    'r_i': self.model.intrinsic_reward(states, goals, masks) + torch.FloatTensor(info['r_i']).unsqueeze(-1).to(self.device),
                     'v_w': value_w,
                     'v_m': value_m,
                     'logp': logp.unsqueeze(-1),
@@ -354,7 +355,7 @@ class QModelTrainer(Train):
             x_next, reward, terminated, truncated, info = self.envs.step(actions)
             for i in range(self.num_workers):
                 mask = 1.0 - (terminated[i] + truncated[i])
-                self.replay_buffer.add(x[i], actions[i], reward[i], x_next[i], mask)
+                self.replay_buffer.add(x[i], actions[i], reward[i] + info['r_i'][i], x_next[i], mask)
             x = x_next
             step += self.num_workers
             if step % 5000 == 0:
@@ -380,7 +381,7 @@ class QModelTrainer(Train):
                 final_obs = infos.get("final_observation", None)
                 for j in range(self.num_workers):
                     next_si = final_obs[j] if (dones[j] and final_obs is not None) else x_next[j]
-                    self.replay_buffer.add(x[j], actions[j], reward[j], next_si, bool(dones[j]))
+                    self.replay_buffer.add(x[j], actions[j], reward[j] + info['r_i'][j], next_si, bool(dones[j]))
 
 
                 x = x_next
@@ -389,7 +390,7 @@ class QModelTrainer(Train):
                 # Make sure the logger populates info['total_reward'], etc. *before* you draw
                 self.logger.log_episode(infos, step)
                 if step % 160 == 0:
-                    visualizer.capture_frame(self.envs, step, actions, reward, terminated, truncated, infos)
+                    visualizer.capture_frame(self.envs, step, actions, reward + infos['r_i'], terminated, truncated, infos)
 
                 step += self.num_workers
 
@@ -404,12 +405,12 @@ class QModelTrainer(Train):
             # 2) Targets
             rewards_t = rewards_t / 10
             with torch.no_grad():
-                # ---- Standard DQN target:
+                # Standard DQN target:
                 # q_next = target_net(next_states_t.flatten(0,1))                       # [B, A]
                 # q_next_max = q_next.max(dim=1, keepdim=True).values      # [B, 1]
                 # target = rewards_t.flatten(0,1) + gamma * masks_t * q_next_max        # [B, 1]
 
-                # ---- Double DQN target (recommended):
+                #  Double DQN target:
                 next_actions = self.model(next_states_np).argmax(dim=1, keepdim=True)  # online picks
                 q_next_tgt = target_net(next_states_np).gather(1, next_actions)        # target evaluates
                 target = rewards_t + gamma * masks_t * q_next_tgt

@@ -108,7 +108,7 @@ class Storage:
         return map(lambda x: torch.stack(x, dim=0), data)
 
 class PacmanRewardWrapper(gym.Wrapper):
-    def __init__(self, env, rnd_model, alpha = .01, death_penalty=5., rnd_delay=20):
+    def __init__(self, env, rnd_model, alpha = .01, death_penalty=5., rnd_delay=10):
         super().__init__(env)
 
         self.death_penalty = death_penalty
@@ -185,11 +185,13 @@ class PacmanRewardWrapper(gym.Wrapper):
         if self.score_best < self.total_reward:
                 self.score_best = self.total_reward
 
+        # modified_reward = np.clip(modified_reward, -1, 1)
         if self.episode > self.rnd_delay and self.rnd_model:
             obs_tensor = torch.tensor(ram, dtype=torch.float32, device=self.device).unsqueeze(0)
-            r_i = self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
-
-            modified_reward += self.alpha * r_i.item()
+            r_i = self.alpha * self.rnd_model.intrinsic_reward(obs_tensor).detach().cpu().numpy()
+        else:
+            r_i = 0
+        #     modified_reward += self.alpha * r_i.item()
         
 
 
@@ -199,6 +201,7 @@ class PacmanRewardWrapper(gym.Wrapper):
 
         info.update({
             'total_reward': self.total_reward,
+            'r_i': r_i,
             'original_reward': reward,
             'modified_reward': modified_reward,
             # 'position': current_position,
@@ -219,41 +222,6 @@ class PacmanRewardWrapper(gym.Wrapper):
                 return (x,y)
             except IndexError:
                 return None
-        else:
-            return self._detect_pacman_position_pixel(obs)
-    
-    def _get_score(self, obs, info):
-        if isinstance(info, dict):
-            if 'score' in info:
-                return info['score']
-            elif hasattr(info, 'episode') and 'r' in info['episode']:
-                return info['episode']['r']
-        
-        if self.ram and len(obs) >= 128:
-            try:
-              return obs[120] * 256 + obs[121]
-            except IndexError:
-                return 0  
-            
-    def _detect_pacman_position_pixel(self, obs):
-        """Detect Ms. Pacman position from pixels"""
-        if len(obs.shape) == 3:  # RGB
-            # Look for yellow Ms. Pacman sprite
-            yellow_mask = (obs[:, :, 0] > 200) & (obs[:, :, 1] > 200) & (obs[:, :, 2] < 100)
-            if np.any(yellow_mask):
-                y_coords, x_coords = np.where(yellow_mask)
-                # Filter for reasonably sized sprites
-                if len(x_coords) > 5 and len(x_coords) < 100:
-                    return (int(np.mean(x_coords)), int(np.mean(y_coords)))
-        elif len(obs.shape) == 2:  # Grayscale
-            # Look for bright sprite
-            bright_mask = obs > 200
-            if np.any(bright_mask):
-                y_coords, x_coords = np.where(bright_mask)
-                if len(x_coords) > 5 and len(x_coords) < 100:
-                    return (int(np.mean(x_coords)), int(np.mean(y_coords)))
-        
-        return None
 
 class MontezumaRewardWrapper(gym.Wrapper):
     def __init__(self, env, rnd_model, exploration_bonus=0.1, stagnation_penalty=0.09, death_penalty=50, alpha =.1):
@@ -377,7 +345,6 @@ class MontezumaRewardWrapper(gym.Wrapper):
         except IndexError:
             return 0
 
-
 class VectorEnvVisualizer:
     def __init__(self, env_idx=0, save_videos=True, save_dir='videos'):
         self.env_idx = env_idx  # Which environment to visualize (0 to num_envs-1)
@@ -492,7 +459,7 @@ class VectorEnvVisualizer:
             unique_actions, counts = np.unique(actions, return_counts=True)
             quarter = len(info['total_reward']) // 4
             IQM = np.median(np.sort(info['total_reward'])[quarter:-quarter])
-            if np.sum(info['lives'] == 0) > 0 or IQM > self.best_reward:
+            if step % 256 == 0 or IQM > self.best_reward:
                 self.best_reward_y.append(IQM)
                 self.best_rewards_x.append(step)
                 if IQM > self.best_reward:

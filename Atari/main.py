@@ -9,7 +9,7 @@ from RND import RNDModel
 
 parser = argparse.ArgumentParser(description='Feudal Nets')
 # GENERIC RL/MODEL PARAMETERS
-parser.add_argument('--lr', type=float, default=5e-4,
+parser.add_argument('--lr', type=float, default=1e-3,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='ALE/MsPacman-v5',
                     help='gym environment name')
@@ -21,13 +21,13 @@ parser.add_argument('--max-steps', type=int, default=int(1e8),
                     help='maximum number of training steps in total')
 parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
-parser.add_argument('--grad-clip', type=float, default=5,
+parser.add_argument('--grad-clip', type=float, default=5.,
                     help='Gradient clipping (recommended).')
 parser.add_argument('--frame-stacking', type=bool, default=True,
                     help='should the frames be stacked to give temporal information')
 parser.add_argument('--greyscale', type=bool, default=True,
                     help='train on greyscale frames, set to True if frame stacking is True')
-parser.add_argument('--entropy-coef', type=float, default=0.05,
+parser.add_argument('--entropy-coef', type=float, default=0.01,
                     help='Entropy coefficient to encourage exploration.')
 parser.add_argument('--mlp', type=int, default=0,
                     help='toggle to feedforward ML architecture')
@@ -45,19 +45,19 @@ parser.add_argument('--gamma-w', type=float, default=0.95,
                     help="discount factor worker")
 parser.add_argument('--gamma-m', type=float, default=0.99,
                     help="discount factor manager"),
-parser.add_argument('--alpha', type=float, default=.1,
+parser.add_argument('--alpha', type=float, default=.3,
                     help='Intrinsic reward coefficient in [0, 1]')
-parser.add_argument('--eps', type=float, default=.5,
+parser.add_argument('--eps', type=float, default=.95,
                     help='Random Gausian goal for exploration')
 parser.add_argument('--dilation', type=int, default=10,
                     help='Dilation parameter for manager LSTM')
 parser.add_argument('--decay', type=float, default=.9985,
                     help='how much eps decays')
-parser.add_argument('--gea', type=bool, default=False,
+parser.add_argument('--gea', type=bool, default=True,
                     help='use gea in advantage calculation')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='feudalv6',
+parser.add_argument('--run-name', type=str, default='feudalv7',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
@@ -117,7 +117,7 @@ def experiment(args):
             mlp=args.mlp,
             args=args)
         optimizer = torch.optim.RMSprop([
-            {'params': feudalnet.manager.parameters(), 'lr': args.lr},
+            {'params': feudalnet.manager.parameters(), 'lr': args.lr * .7},
             {'params': feudalnet.worker.parameters(), 'lr': args.lr},
             {'params': feudalnet.perception.parameters(), 'lr': args.lr},
         ], lr= args.lr, alpha=.99, eps=1e-5)
