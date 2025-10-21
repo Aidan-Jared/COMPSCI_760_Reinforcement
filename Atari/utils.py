@@ -540,12 +540,12 @@ def make_env(env_name, rnd_model, obs, wrapper, rnd_delay, args):
     return _thunk
 
 
-def make_envs(env_name, num_envs, args, train=True, rnd_model=None, rnd_delay = None):
+def make_envs(env_name, num_envs, args, rnd_model=None, rnd_delay = None):
     if args.mlp == 1:
         obs = 'ram'
     else:
         obs = "rgb"
-    if 'Pacman' in args.env_name:
+    if 'Pacman' in env_name:
         envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, PacmanRewardWrapper, rnd_delay, args) for _ in range(num_envs)])
     else:
         envs = gym.vector.SyncVectorEnv([make_env(env_name, rnd_model, obs, MontezumaRewardWrapper, rnd_delay, args) for _ in range(num_envs)])
