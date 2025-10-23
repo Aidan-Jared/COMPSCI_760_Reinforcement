@@ -506,12 +506,18 @@ class VectorEnvVisualizer:
             self.ax2.set_xlabel('Action')
             self.ax2.set_ylabel('Count')
             
+            # Plot total rewards and best scores side-by-side
             self.ax3.clear()
-            self.ax3.bar(list(range(len(rewards))),info['total_reward'], alpha=0.7)
-            self.ax3.set_title('Rewards Across Environments')
-            self.ax3.set_xlabel('total reward')
-            self.ax3.set_ylabel('envorment')
-
+            num_envs = len(info['total_reward'])
+            x = np.arange(num_envs)
+            width = 0.35
+            self.ax3.bar(x - width/2, info['total_reward'], width, label='Total Reward', alpha=0.7)
+            self.ax3.bar(x + width/2, info['score best'], width, label='Best Score', alpha=0.7)
+            self.ax3.set_title('Rewards and Best Scores Across Environments')
+            self.ax3.set_xlabel('Environment')
+            self.ax3.set_ylabel('Score')
+            self.ax3.legend()
+            
             self.ax4.clear()
             self.ax4.scatter(self.best_rewards_x, self.best_reward_y)
             self.ax4.set_title('IQM across time')
@@ -519,10 +525,8 @@ class VectorEnvVisualizer:
             self.ax4.set_ylabel('IQM')
 
 
-            self.ax5.clear()
-            self.ax5.bar(np.arange(len(info['total_reward'])), info['score best'])
-            # self.ax5.set_xlabel('episode')
-            self.ax5.set_ylabel('best score')
+            # ax5 is now free, you can clear it or use it for another plot
+            self.ax5.clear() 
 
             self.ax6.clear()
             self.ax6.bar(np.arange(len(info['total_reward'])), info['episode'])
