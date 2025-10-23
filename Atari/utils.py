@@ -158,7 +158,6 @@ class PacmanRewardWrapper(gym.Wrapper):
         ram = self.env.unwrapped.ale.getRAM()
         current_score = self.total_reward + reward
         self.total_reward += reward
-        # current_position = self._get_position(ram)
 
 
         modified_reward = reward
@@ -194,14 +193,12 @@ class PacmanRewardWrapper(gym.Wrapper):
 
 
         self.prev_score = current_score
-        # self.prev_positon = current_position
 
 
         info.update({
             'total_reward': self.total_reward,
             'original_reward': reward,
             'modified_reward': modified_reward,
-            # 'position': current_position,
             'score': current_score,
             'using_ram': self.ram,
             'episode': self.episode,
@@ -221,39 +218,6 @@ class PacmanRewardWrapper(gym.Wrapper):
                 return None
         else:
             return self._detect_pacman_position_pixel(obs)
-    
-    def _get_score(self, obs, info):
-        if isinstance(info, dict):
-            if 'score' in info:
-                return info['score']
-            elif hasattr(info, 'episode') and 'r' in info['episode']:
-                return info['episode']['r']
-        
-        if self.ram and len(obs) >= 128:
-            try:
-              return obs[120] * 256 + obs[121]
-            except IndexError:
-                return 0  
-            
-    def _detect_pacman_position_pixel(self, obs):
-        """Detect Ms. Pacman position from pixels"""
-        if len(obs.shape) == 3:  # RGB
-            # Look for yellow Ms. Pacman sprite
-            yellow_mask = (obs[:, :, 0] > 200) & (obs[:, :, 1] > 200) & (obs[:, :, 2] < 100)
-            if np.any(yellow_mask):
-                y_coords, x_coords = np.where(yellow_mask)
-                # Filter for reasonably sized sprites
-                if len(x_coords) > 5 and len(x_coords) < 100:
-                    return (int(np.mean(x_coords)), int(np.mean(y_coords)))
-        elif len(obs.shape) == 2:  # Grayscale
-            # Look for bright sprite
-            bright_mask = obs > 200
-            if np.any(bright_mask):
-                y_coords, x_coords = np.where(bright_mask)
-                if len(x_coords) > 5 and len(x_coords) < 100:
-                    return (int(np.mean(x_coords)), int(np.mean(y_coords)))
-        
-        return None
 
 class MontezumaRewardWrapper(gym.Wrapper):
     def __init__(self, env, rnd_model, exploration_bonus=0.1, stagnation_penalty=0.09, death_penalty=50, alpha =.1):
